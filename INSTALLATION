@@ -1,0 +1,84 @@
+Installing the RSR pipeline
+
+Unzip the contents of the archive (tar -xf rsr.gz).
+Change directory to the output directory (cd rsr)
+Run 'make' (make); or, compile each .cpp file individually as described below, if you change the output name of the program, you will need to update the rsw_config.sh file to use the name you supplied...  :
+    splitPairs.cpp: g++ splitPairs.cpp -std=c++11 -O4 -o sp4
+    split_read_rsw.c:  gcc split_read_rsw.c -O4 -o srr
+    split_first_column.c: gcc split_first_column.c -O4 -o sfc
+    split_bowtie_chrom.c: gcc split_bowtie_chrom.c -O4 -o sbc
+    compare.cpp:    g++ compare.cpp -O4 -o rsw_compare
+
+Note: "split bowtie chrom" is sort of a bonus file, see the README for details.
+
+create directories in the location of your choice for holding temporary and permanent output files for the pipeline; you will need these for rsw_config.sh
+
+
+CONFIGURATION
+
+edit "rsw_config.sh" with the editor of your choice (nano, vim, emacs, etc.).
+Navigate to the section labelled "USER CONFIGURATION" where there are two sections to update:
+The following fields may need updating, depending on your system. Their default values can work, but 
+the TEMP_DIR entries will need to be created.  The entries follow this format:
+VARIABLE="VALUE"   . The double-quotes are required, so please keep them.
+
+set the TEMP_DIR values to locations on your system to where the pipeline can store intermediate files. 
+It is recommended that these locations have significant allocations of disk space (terabytes, preferrably).
+
+An explanation of each variable follows:
+
+BOWTIE_TEMP_DIR
+This is where the unmapped and mapped output files from bowtie will be stored. 
+
+SPLIT_TEMP_DIR
+This is where the split unmapped reads will be stored. This directory should have a lot of free disk space,
+as these are the largest of the files produced in the process.
+
+RSR_TEMP_DIR
+RSR's temporary configuration file and the output files will be stored here before being moved to your 
+specified target directory.
+
+LOG_DIR
+The RSR pipeline can generate a detailed log of its operation. Specify here where those logs should be
+kept.
+
+BASES_TO_TRIM
+If your reads have low quality at the right-end (3p), specify here how many to trim off the edge.
+This is done at the SPLIT step.
+
+BOWTIE_INDEXES
+Where your bowtie index files (ebwt) are located. There is a level of customization here:
+If ALL your index files are in ONE directory, set this value to that directory.
+if Your index files are in subdirectories of a particular base, set this to an empty string ("").
+
+BOWTIE_INDEX_DIR
+If your index files are in subdirectories of a particular base, set THIS variable to that directory.
+Otherwise, leave it blank ("").
+
+AVAILABLE_INDEXES
+This should be a double-quoted NOT COMMA SEPARATED list of the index prefixes for your available genomes.
+These values will be passed to bowtie to specify which index to use. (see bowtie manual:
+http://bowtie-bio.sourceforge.net/manual). 
+
+INDEX_NAMES
+Like AVAILABLE_INDEXES, this should be a space-delimited, double-quoted list...
+This variable does double-duty within the pipeline. It contains the names of the genomes you have available, in
+more friendly terms, and IT IS THE LIST OF DIRECTORY NAMES USED TO FIND YOUR INDEXES.
+
+For example: all my index files are stored in directories named after the organism to which they referr.
+so I have: "human" "mouse" "arabidopsis" (becasue I can't find a better way to say "mustard weed").
+
+(see also: Index Examples, below)
+
+REFDIR
+Where your flat reference files are stored. these are the knownGene.txt files associated with the organisms
+for which you have index files.
+
+
+#------Programs----------------------
+BOWTIE_PROGRAM
+SPLIT_PROGRAM
+FORMAT_PROGRAM
+RSR_PROGRAM
+COMPARE_PROGRAM
+
