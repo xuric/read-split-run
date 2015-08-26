@@ -6,30 +6,37 @@ This is the software package for the Read-Split-Run pipeline. Included are the s
 INSTALLATION
 
 Installing the pipeline:
-    gunzip rsr.gz to the location of your choice; this shall be the INSTALLATION DIRECTORY.
+    decompress rsr.tar.gz (tar -zxvf rsr.tar.gz) to the location of your choice; this shall be the INSTALLATION DIRECTORY.
+
+Python 2.7 (or later):
+    The encoding guesser requires that python be installed on the system and its executable in an accessible location. It is likely that earlier versions of python will work, but our tests used version 2.7.5.  Python can be downloaded from https://www.python.org/downloads.
 
 Bowtie 1.0.1 (or later): 
-    Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net.
+    Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net. 
 
-Bowtie Indexes, gene reference files:
-You will need bowtie indexes and knownGene files for the genome(s) of your choice. 
-The index files can be stored in two ways to be compatable with RSR:
-    All in one common directory, or each in its own subdirectory of some other common directory.
-    ex: (one directory):   /usr/local/bowtie/indexes
-        (subdirectories):  /net/projects/genomes/human
-                           /net/projects/genomes/mouse
+Bowtie Indexes:
+You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory.
 
-For knownGene reference files:
-Create a directory under which you will store your knownGene reference files. In this directory, make subdirectories for your organisms, either by assembly name or common name (of your choice). This is similar to the "common directory" method described for index files, above.
-The pipeline requires that the flat reference file be parsed to mark intron/exon boundaries. We have provided a perl script "refflat_parse_RSW.pl" to accomplish this. Once your knownGene files are in place, for each of them run the provided "refflat_parse_RSW.pl" and provide as argument your knownGene file (with full path).
-Ex:  perl refflat_parse_RSW.pl /net/projects/refs/human/knownGene.txt
+knownGene reference files:
+
+For the genomes to which you plan to align, download their knownGene reference file. Place the knownGene.txt file in the same directory as your bowtie indexes, and CHANGE THE NAME OF THE FILE TO HAVE THE FOLLOWING PATTERN: OrganismAssemblyName.knownGene.txt (i.e. If you plan on using Human assembly hg19, its knownGene.txt should be "hg19.knownGene.txt"; if you plan on using Mouse assembly mm9sp35, make its knownGene file "mm9sp35.knownGene.txt"; these files are CASE SENSITIVE.
+
+Furthermore, Read-Split-Run requires a special parsed gene reference with intron/exon boundaries identified. We provide a script to create this file called "refflat_parse_RSW.pl" in the RSR INSTALLATION DIECTORY. Run this script and supply the gene reference file as the input argument...
+Ex:  perl refflat_parse_RSW.pl /usr/local/bowtie/indexes/hg19.knownGene.txt
+It will generate the annotated file "hg19.knownGene.txt.intronBoundry.exonsgaps" which is needed by the splitPairs program.
+
+(editor's note: yes, boundary is misspelled. do not correct it...)
+
+gcc (g++) version 4.8 or better:
+Compiling the associated programs requires gcc version 4.8 or higher (to accommodate features of c++11 that are used in splitpairs). 
 
 
 
-CONFIGURATION:
+OPTIONAL CONFIGURATION:
 
-Edit the configuration file: "rsr_config.sh" in a plain-text editor (vim, nano, etc.)...
-change the following variables in the USER CONFIGURATION section to suit your situation:
+There is no mandatory configuration that needs be done if you have followed the installation instructions to this point. The following are presented as options for the advanced user.
+
+The configuration file: "rsr_config.sh" contains all the configurable values used by the pipeline. It can be edited with any plain-text editor (nano, vim, etc). You can change the following variables in the USER CONFIGURATION section to suit your disired configuration:
 
 BOWTIE_TEMP_DIR     location to store intermediate bowtie files.
 
@@ -39,50 +46,34 @@ RSR_TEMP_DIR        location to store intermediate RSR options and output files.
 
 LOG_DIR             location to store diagnostic and operational logs.
 
-BOWTIE_INDEX_DIR    If your bowtie indexes are separated by directory names under a common
-                    directory, specify that place here and leave BOWTIE_INDEXES empty
+BOWTIE_INDEX_ROOT    If your bowtie indexes are separated by directory names under a common directory, specify that place here and leave BOWTIE_INDEXES empty
 
-BOWTIE_INDEXES      If your bowtie indexes are all contained in a single directory, specify
-                    that here and leave BOWTIE_INDEX_DIR empty. 
+BOWTIE_INDEXES      If your bowtie indexes are all contained in a single directory, specify that here and leave BOWTIE_INDEX_ROOT empty. 
 
-BOWTIE              path to bowtie executable (e.g. /usr/bin/bowtie).
+BOWTIE              the absolute path to bowtie executable (e.g. /usr/bin/bowtie).
 
-REFDIR              A common directory under which you store knownGene reference files in
-                    subdirectories named after their orgnism's name, or common name. 
+REFDIR              Directory containing knownGene files (and gene Intron/exon boundary files). All files for your available genomes must be in this directory.
 
-BASES_TO_TRIM       How many bases should be trimmed off the right-end of your reads? 
-                    Set this according ot the quality of your reads. Default: 0
-                    This setting is enforced in bowtie, and elsewhere.
-
-AVAILABLE_INDEXES   Here, put the common-names for the organisms of your bowtie indexes and 
-                    knownGene files. Inside the parentheses, enter the names with double-quotes
-                    round them ( "human" "mouse" ...); do not put commas between them.
-
-INDEX_NAMES         The bowtie indexes available on your system, by name only (the part before
-                    the .ebwt portion of the index file). Put the index names in quotes between
-                    the parentheses IN THE SAME ORDER AS THE COMMON NAMES.
-                    Ex: if your AVAILABLE_INDEXES=( "human "mouse" "arabidopsis" )
-                    INDEX_NAMES=( "hg19sp101" "mm9sp35" "TAIR10_ChrAll" )
-                    See Also: NAMING CONVENTIONS, below.
+BASES_TO_TRIM       How many bases should be trimmed off the right-end of your reads?  Set this according ot the quality of your reads. Default: 0.
 
 
-All other variables are internal-use and should not be changed. Read the comments in the configuration file
-for details as to what function they provide. 
-
+All other variables are internal-use and should not be changed. Read the comments in the configuration file for details as to what function they provide.  
 
 DEPENDENCIES:
 
-All shell scripts (files ending in .sh) rely on "rsw_config.sh," which holds the configuration data.
+All shell scripts (files ending in .sh) rely on "rsw_config.sh," which holds the configuration data. Other scripts' call upon other execuables as needed, depicted below.
 
 rsw_batch_job.sh
 -   rsw_pipeline.sh
     -   bowtie.sh
+        -   guess-encoding.py
+            -   Python 2.7 or newer
         -   bowtie v1.0.1 or newer
     -   split.sh
         -   srr
     -   sfc 
-    -   rsw.sh
-        -   rsw
+    -   rsr.sh
+        -   sp4
 -   compare_sh
     -   rsw_comparison
 
@@ -94,10 +85,9 @@ To run the pipeline, execute rsw_batch_job.sh with the following inputs:
 
 mode                Choose "analytic" or "comparison"
                     analytic jobs only produce RSW output files
-                    comparative jobs produce RSW output files AND a file which shows the differences
-                    between the two
+                    comparative jobs produce RSW output files for both data sets, AND a file which shows the differences between the two
 
-genome              Which genome to which to align reads. See NAMING CONVENTIONS for more info...
+genome              The bowtie index for the genome to which to align reads. Also specifies which knownGene file to use (see INSTALLATION). Specify the assembly name.
 
 readsFile           The file(s) with RNA-Seq data in plain-text FASTQ format.
                     The nature of your run will determine how you should specify your files.
@@ -127,7 +117,7 @@ minSplitdistance    Smallest amount of distance allowed between split-reads to b
 
 maxSplitdistance    Largest amount of distance between split-reads to be considered a splice-junction candidate.
 
-regionBuffer        By how much candidate junctions are allowed to vary in their start-position in order to "support" one-another.
+regionBuffer        By how much candidate junctions are allowed to differ in their start-position in order to "support" one-another.
 
 requiredSupports    Report only junctions with this many supporting reads, or more.
 
@@ -135,6 +125,10 @@ pathToSaveFesults   Where to put the final output files.
 
 
 Examples:
+
+Several scripts are provided as examples of how to run the pipeline. Look at the files in samples directory.
+
+Here are presented example command-lines for doing various kinds of runs...
 
 Analytic runs:
 
@@ -153,13 +147,8 @@ Run with Replicates:  ./rsw_batch_job analytic human "set1replicate1.fastq,set1r
 Paired Run: ./rsw_batch_job.sh analytic human "set1_1.fastq|set1_2.fastq" "set2_1.fastq|set2_2.fastq" 11 33 3 50000 5 2 ~/hg19_paired_results
 ...
 
-NAMING CONVENTIONS
-
-Most genome index files are given by their NCBI Assembly names, which we found to be quite inconveninet at times. Therefore we implemented an optional "common name" method of addressing one's genomes (i.e. hg19sp101 = "human", mm9sp35 = "mouse", etc.). These common names are used for the "genome" input parameter to rsw_batch_job.sh, and as the directory name, under your REFDIR, where the knownGene and gene intron/exon boundary files will be located (see INSTALLING).
-If you prefer to use the assembly names, simply use them as the directories for your knowngene reference (and possibly for your index subdirectory, if used).
-
 KNOWN ISSUES
 
-The Quality-encoding dection portion of bowtie.sh is known to cause a broken pipe with awk. This is acceptible and does not interfere with the performance of the pipeline.
+The Quality-encoding detection portion of bowtie.sh is known to cause a broken pipe with awk. This is acceptible and does not interfere with the performance of the pipeline.
 
 

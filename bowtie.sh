@@ -3,17 +3,10 @@
 BASEDIR=$(dirname $(realpath $0))
 source "${BASEDIR}/rsr_config.sh"
 
-function pick_genome() {
-for ((i = 0;i < ${#AVAILABLE_INDEXES[@]}; i++)); do
-    if [[ "$1" == ${AVAILABLE_INDEXES[$i]} ]]; then echo ${INDEX_NAMES[$i]}; exit 0; fi
-done
-    exit 1
-}
-
 function set_indexes() {
-    if [ -z "$BOWTIE_INDEXES" ] && [ ! -z "$BOWTIE_INDEX_DIR" ]; then
-        BOWTIE_INDEXES="${BOWTIE_INDEX_DIR}/$1"
-    elif [ ! -z "$BOWTIE_INDEXES" ] && [ -z "$BOWTIE_INDEX_DIR" ]; then
+    if [ -z "$BOWTIE_INDEXES" ] && [ ! -z "$BOWTIE_INDEX_ROOT" ]; then
+        BOWTIE_INDEXES="${BOWTIE_INDEX_ROOT}/$1"
+    elif [ ! -z "$BOWTIE_INDEXES" ] && [ -z "$BOWTIE_INDEX_ROOT" ]; then
         : #need something to make sure this is still a thing
     else
         die "Don't know where to look for the bowtie indexes"
@@ -66,11 +59,11 @@ fi
 #    #    "bacteria") result="GCA_000007425.1_ASM742v1_genomic";
 #        *) exit 1
 #    esac
-#    BOWTIE_INDEXES="$BOWTIE_INDEX_DIR/$1"
+#    BOWTIE_INDEXES="$BOWTIE_INDEX_ROOT/$1"
 #fi
 
 try set_indexes $1
-genome=$(pick_genome $1)
+genome=$1
 if (( $? )) && [ -z "$genome" ]; then
     die "Cannot find genome for $1"
 fi
@@ -100,7 +93,7 @@ if [ "$2" == "phase1" ]; then
 elif [ "$2" == "phase2" ]; then
     bowtie_params+="0"
 fi
-log "BOWTIE_INDEX_DIR: $BOWTIE_INDEX_DIR, BOWTIE_IDNEXES: $BOWTIE_INDEXES"
+log "BOWTIE_INDEX_ROOT: $BOWTIE_INDEX_DIR, BOWTIE_IDNEXES: $BOWTIE_INDEXES"
 log "bowtying $2 $genome $bowtie_params $input_params"
 
 echo $(run_bowtie $2 "$genome" "$bowtie_params" "$input_params" "$outname")

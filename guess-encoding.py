@@ -1,7 +1,7 @@
 """
 guess-encoding.py: (c) Brent Pedersen
 
-useage: awk 'NR % 4 == 0' your.fastq | python %prog [options]
+usage: awk 'NR % 4 == 0' your.fastq | python %prog [options]
 
 guess the encoding of a stream of qual lines.
 """
