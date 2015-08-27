@@ -4,6 +4,14 @@
 if [ -z "$CONFIGURED" ]; then
 CONFIGURED=true
 BASEDIR=$( cd ${0%/*} >& /dev/null ; pwd -P )  #moved to this method to avoid platform-specific comamnds
+yell() { echo "$(basename $0): $*" >&2; }
+die() { yell "$*"; log "$*"; exit 111; kill $$; }
+try() { "$@" || die "cannot $*"; }
+dprint() { if $DEBUG; then yell "$*"; fi }
+log() { echo "$(basename $0): $*" >> "${LOG_FILE}"; dprint "$@"; }
+timing_start() { if [ -z "$START_TIME" ]; then START_TIME=$(date +%s); fi }
+timing_end() { if [ ! -z "$START_TIME" ]; then log "Duration: $(( $(date +%s) - $START_TIME )) seconds"; fi }
+
 
 #-------USER CONFIGURATION------------
 #-------Directories-------------------
@@ -37,14 +45,6 @@ if [ -z "$LOG_FILE" ] || [ -z "$RUN_ID" ]; then
 export -p RUN_ID="$(date +%F.%s)"
 export -p LOG_FILE="${LOG_DIR}/RSR_${RUN_ID}.log"
 fi
-
-yell() { echo "$(basename $0): $*" >&2; }
-die() { yell "$*"; log "$*"; exit 111; kill $$; }
-try() { "$@" || die "cannot $*"; }
-dprint() { if $DEBUG; then yell "$*"; fi }
-log() { echo "$(basename $0): $*" >> "${LOG_FILE}"; dprint "$@"; }
-timing_start() { if [ -z "$START_TIME" ]; then START_TIME=$(date +%s); fi }
-timing_end() { if [ ! -z "$START_TIME" ]; then log "Duration: $(( $(date +%s) - $START_TIME )) seconds"; fi }
 
 
 
