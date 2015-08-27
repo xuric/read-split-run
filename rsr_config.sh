@@ -3,7 +3,7 @@
 #------Only Configure the thing ONCE, please---
 if [ -z "$CONFIGURED" ]; then
 CONFIGURED=true
-DEBUG=true
+DEBUG=false
 BASEDIR=$( cd ${0%/*} >& /dev/null ; pwd -P )  #moved to this method to avoid platform-specific comamnds
 yell() { echo "$(basename $0): $*" >&2; }
 die() { yell "$*"; log "$*"; exit 111; kill $$; }
