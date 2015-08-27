@@ -32,6 +32,7 @@ COMPARE_PROGRAM="${BASEDIR}/rsr_compare"          # Program for comparing RSR ou
 
 #Meta defines
 DEBUG=false
+export -p TERM=vt100                                        # this seesm to be necessary for bowtie...
 if [ -z "$LOG_FILE" ] || [ -z "$RUN_ID" ]; then
 export -p RUN_ID="$(date +%F.%s)"
 export -p LOG_FILE="RSR_${RUN_ID}.log"
