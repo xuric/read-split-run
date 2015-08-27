@@ -8,22 +8,25 @@ INSTALLATION
 Installing the pipeline:
     decompress rsr.tar.gz (tar -zxvf rsr.tar.gz) to the location of your choice; this shall be the INSTALLATION DIRECTORY.
 
+Perl 5.16 (or later):
+    The converter for the gene reference file (see below) requires Perl to run. We tested it with version 5.16, though it is likely that earlier versions will work. Perl can be downloaded from http://www.perl.org .
+
 Python 2.7 (or later):
-    The encoding guesser requires that python be installed on the system and its executable in an accessible location. It is likely that earlier versions of python will work, but our tests used version 2.7.5.  Python can be downloaded from https://www.python.org/downloads.
+    The encoding guesser requires that python be installed on the system and its executable in an accessible location. It is likely that earlier versions of python will work, but our tests used version 2.7.5.  Python can be downloaded from https://www.python.org .
 
 Bowtie 1.0.1 (or later): 
     Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net. 
 
 Bowtie Indexes:
-You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory.
+You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory. Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net). 
 
 knownGene reference files:
 
-For the genomes to which you plan to align, download their knownGene reference file. Place the knownGene.txt file in the same directory as your bowtie indexes, and CHANGE THE NAME OF THE FILE TO HAVE THE FOLLOWING PATTERN: OrganismAssemblyName.knownGene.txt (i.e. If you plan on using Human assembly hg19, its knownGene.txt should be "hg19.knownGene.txt"; if you plan on using Mouse assembly mm9sp35, make its knownGene file "mm9sp35.knownGene.txt"; these files are CASE SENSITIVE.
+For the genomes to which you plan to align, download their knownGene reference file from UCSC (http://hgdownload.cse.ucsc.edu/downloads.html). Place the knownGene.txt file in the same directory as your bowtie indexes, and CHANGE THE NAME OF THE FILE TO HAVE THE FOLLOWING PATTERN: OrganismAssemblyName.knownGene.txt (i.e. If you plan on using Human assembly hg19, its knownGene.txt should be "hg19.knownGene.txt"; if you plan on using Mouse assembly mm9sp35, make its knownGene file "mm9sp35.knownGene.txt"; these files are CASE SENSITIVE.
 
-Furthermore, Read-Split-Run requires a special parsed gene reference with intron/exon boundaries identified. We provide a script to create this file called "refflat_parse_RSW.pl" in the RSR INSTALLATION DIECTORY. Run this script and supply the gene reference file as the input argument...
+Furthermore, the splitPairs portion of Read-Split-Run requires a special parsed gene reference with intron/exon boundaries identified. We provide a script to create this file called "refflat_parse_RSW.pl" in the RSR INSTALLATION DIECTORY. Run this script and supply the gene reference file as the input argument...
 Ex:  perl refflat_parse_RSW.pl /usr/local/bowtie/indexes/hg19.knownGene.txt
-It will generate the annotated file "hg19.knownGene.txt.intronBoundry.exonsgaps" which is needed by the splitPairs program.
+It will generate the annotated file "hg19.knownGene.txt.intronBoundry.exonsgaps" 
 
 (editor's note: yes, boundary is misspelled. do not correct it...)
 
@@ -77,7 +80,8 @@ rsw_batch_job.sh
 -   compare_sh
     -   rsw_comparison
 
-refFlat_parse_RSW.pl and sbc have no dependencies.
+refFlat_parse_RSW.pl requires Perl 5.16 or newer
+sbc has no external dependencies.
 
 RUNNING:
 
@@ -126,29 +130,42 @@ pathToSaveFesults   Where to put the final output files.
 
 Examples:
 
-Several scripts are provided as examples of how to run the pipeline. Look at the files in samples directory.
-
-Here are presented example command-lines for doing various kinds of runs...
+Here are presented example command-lines for doing various kinds of runs the assembly names are real but the file names are made-up...
 
 Analytic runs:
 
-Normal Run: ./rsw_batch_job.sh analytic mouse "mm9.fastq" 11 11 3 30000 4 2 ~/mm9_results
+Normal Run: ./rsw_batch_job.sh analytic mm9 "mus1.fastq" 11 11 3 30000 4 2 ~/mm9_results
 
-Run with Replicates:  ./rsw_batch_job analytic human "hg19-1.fastq,hg19-2.fastq,hg19-3.fastq" 11 33 3 50000 5 2 ~/hg19_results
+Run with Replicates:  ./rsw_batch_job analytic hg19 "hg19-1.fastq,hg19-2.fastq,hg19-3.fastq" 11 33 3 50000 5 2 ~/hg19_results
 
-Paired Run: ./rsw_batch_job.sh analytic human "hg19_1.fastq|hg19_2.fastq" 11 33 3 50000 5 2 ~/hg19_paired_results
+Paired Run: ./rsw_batch_job.sh analytic hg19sp101 "hg19_1.fastq|hg19_2.fastq" 11 33 3 50000 5 2 ~/hg19_paired_results
 
-Paired, replicated: ./rsw_batch_job analytic human "hg19-1_1.fastq,hg19-2_1.fastq|hg19-1_2.fastq,hg19-2_2.fastq" 11 33 3 50000 5 2 ~/hg19_pair_repl_results
+Paired, replicated: ./rsw_batch_job analytic hg19sp101 "hg19-1_1.fastq,hg19-2_1.fastq|hg19-1_2.fastq,hg19-2_2.fastq" 11 33 3 50000 5 2 ~/hg19_pair_repl_results
 
 Comparative runs:
 
-Normal Run: ./rsw_batch_job.sh comparative mouse "set1.fastq" "set2.fastq" 11 11 3 30000 4 2 ~/mm9_compare
-Run with Replicates:  ./rsw_batch_job analytic human "set1replicate1.fastq,set1replicate2.fastq" "set2replicate1.fastq,set2replicate2.fastq" 11 33 3 50000 5 2 ~/hg19_results
-Paired Run: ./rsw_batch_job.sh analytic human "set1_1.fastq|set1_2.fastq" "set2_1.fastq|set2_2.fastq" 11 33 3 50000 5 2 ~/hg19_paired_results
+Normal Run: ./rsw_batch_job.sh comparative mm9 "set1.fastq" "set2.fastq" 11 11 3 30000 4 2 ~/mm9_compare
+Run with Replicates:  ./rsw_batch_job analytic hg19 "set1replicate1.fastq,set1replicate2.fastq" "set2replicate1.fastq,set2replicate2.fastq" 11 33 3 50000 5 2 ~/hg19_results
+Paired Run: ./rsw_batch_job.sh analytic hg19sp101 "set1_1.fastq|set1_2.fastq" "set2_1.fastq|set2_2.fastq" 11 33 3 50000 5 2 ~/hg19_paired_results
 ...
 
 KNOWN ISSUES
 
 The Quality-encoding detection portion of bowtie.sh is known to cause a broken pipe with awk. This is acceptible and does not interfere with the performance of the pipeline.
+
+COPYRIGHT
+
+Read-split-run is copyright(c) 2014-2015 Yongsheng Bai, Brandon Donham, Randal J. Kaufman, Jeff Kinne. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+a copy is also provided in the LICENSE file, accompanying this.
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
