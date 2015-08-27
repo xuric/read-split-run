@@ -7,16 +7,19 @@ SUFFIX=".results"
 OUTNAME="comparison.txt"
 
 function do_compare() {
-    try $RSR_COMPARE_PROG "$RSR_LINES_TO_SKIP" $RSR_BOUNDARY $OUTNAME $@ >& $RSR_LOG_FILE
-    mv "${OUTNAME}.comparisonSummary.txt" "$RSR_DEST"
-    mv "${OUTNAME}.comparedResults.txt" "$RSR_DEST"
+    tolerance=$1
+    shift
+    whereto=$(dirname $2)
+    $COMPARE_PROG "$LINES_TO_SKIP" $tolerance $OUTNAME $@ >& /dev/null
+    mv "${OUTNAME}.comparisonSummary.txt" "$whereto"
+    mv "${OUTNAME}.comparedResults.txt" "$whereto"
 
 }
 
 #---------Main-------
 
-if (( $# < 2 )); then
-    yell "usage -- $(basename $0)  <file1> <file2>"
+if (( $# < 3 )); then
+    yell "usage -- $(basename $0)  <support tolerance> <file1> <file2>"
     die  "you had $# : $@"
 fi
 

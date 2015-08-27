@@ -84,7 +84,7 @@ function split_columns() {
     if [ ! -f "${file}.bowtie.txt" ]; then
         die "No bowtie file for ${file}. Cannot continue."
     fi
-    try $FORMAT_PROGRAM "${file}.bowtie.txt" >& "${LOG_DIR}/${LOG_FILE}"
+    try $FORMAT_PROGRAM "${file}.bowtie.txt" >& "${LOG_FILE}"
     if [ ! -f "${file}.bowtie.txt.split1stcolumn" ]; then
         die "Failed to generate formatted data for ${file}"
     fi

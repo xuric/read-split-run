@@ -55,7 +55,7 @@ function run_rsw() {
         if [ -z "$LOG_FILE" ]; then
             logfile="/dev/null"
         else
-            logfile="${LOG_DIR}/${LOG_FILE}"
+            logfile="${LOG_FILE}"
         fi
         try $RSR_PROGRAM "$OPTSFILE" >& $logfile
         if [ ! -f "${OUTPUTFILE}.results" ]; then
