@@ -3,6 +3,7 @@
 #------Only Configure the thing ONCE, please---
 if [ -z "$CONFIGURED" ]; then
 CONFIGURED=true
+DEBUG=true
 BASEDIR=$( cd ${0%/*} >& /dev/null ; pwd -P )  #moved to this method to avoid platform-specific comamnds
 yell() { echo "$(basename $0): $*" >&2; }
 die() { yell "$*"; log "$*"; exit 111; kill $$; }
@@ -17,13 +18,10 @@ timing_end() { if [ ! -z "$START_TIME" ]; then log "Duration: $(( $(date +%s) - 
 #-------Directories-------------------
 BASE_TEMP_DIR="${BASEDIR}/tmp"
 BOWTIE_TEMP_DIR="${BASE_TEMP_DIR}/bowtie"
-SPLIT_TEMP_DIR="${BASE_TEMP_DIR}/splilt"
+SPLIT_TEMP_DIR="${BASE_TEMP_DIR}/split"
 RSR_TEMP_DIR="${BASE_TEMP_DIR}/splitpairs"
 LOG_DIR="${BASEDIR}/logs"
 BASES_TO_TRIM=2
-if [ -z "$BOWTIE_INDEXES" ]; then
-    die "No BOWTIE_INDEXES. cannot continue."
-fi
 BOWTIE_INDEX_ROOT=""
 REFDIR="${BOWTIE_INDEXES}"                                    #where the refFlats are
 
@@ -39,14 +37,15 @@ COMPARE_PROGRAM="${BASEDIR}/rsr_compare"          # Program for comparing RSR ou
 #CHANGE THESE AT YOUR OWN RISK
 
 #Meta defines
-DEBUG=false
 export -p TERM=vt100                                        # this seesm to be necessary for bowtie...
 if [ -z "$LOG_FILE" ] || [ -z "$RUN_ID" ]; then
 export -p RUN_ID="$(date +%F.%s)"
 export -p LOG_FILE="${LOG_DIR}/RSR_${RUN_ID}.log"
 fi
 
-
+if [ -z "$BOWTIE_INDEXES" ]; then
+    die "No BOWTIE_INDEXES. cannot continue."
+fi
 
 #this sets the location to find the sub-parts of the pipeline
 #BASEDIR=$(dirname $(realpath $0))

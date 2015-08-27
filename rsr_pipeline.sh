@@ -33,6 +33,7 @@ function align() {
     dest=$5
     log "ALIGN: $genome $phase $reads $maxGood"
     result=$(try $ALIGN_SCRIPT $genome $phase $reads $maxGood)
+    if (( $? )); then die "Failed to Align. Aborting."; fi
     #if we made a file for the printed output, move it
     if [ -f "${result}.bowtie.out" ]; then
         cp "${result}".bowtie.out $dest
@@ -54,6 +55,7 @@ function split_pairs() {
     #len=$3
     log "running $SPLIT_PROGRAM $@ $SPLIT_TEMP_DIR"
     echo $(try $SPLIT_SCRIPT "$@" $SPLIT_TEMP_DIR)
+    if (( $? )); then die "Failed to split pairs.Aborting."; fi
 }
 
 #Temporarily out of service
@@ -85,6 +87,7 @@ function split_columns() {
         die "No bowtie file for ${file}. Cannot continue."
     fi
     try $FORMAT_PROGRAM "${file}.bowtie.txt" >& "${LOG_FILE}"
+    if (( $? )); then die "Failed to split columns. Aborting"; fi
     if [ ! -f "${file}.bowtie.txt.split1stcolumn" ]; then
         die "Failed to generate formatted data for ${file}"
     fi
@@ -98,6 +101,7 @@ function split_columns() {
 function rsr() {
     log "rsr.sh $*"
     echo $(try $RSR_SCRIPT "$@")
+    if (( $? )); then die "Failed to do candidate matching. Aborting"; fi
 }
 
 

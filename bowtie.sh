@@ -27,10 +27,10 @@ function run_bowtie() {
     outname="$BOWTIE_TEMP_DIR/$5"
     if [ "$phase" == "phase1" ]; then
         log "bowtie $bowtie_index_file $QUALS  $params -q $inputs --un ${outname}.unmapped.txt ${outname}.bowtie.txt"
-        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs --un "$outname".unmapped.txt "$outname".bowtie.txt >& "$outname".bowtie.out
+        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs --un "$outname".unmapped.txt "$outname".bowtie.txt >& "$LOG_FILE"
     elif [ "$phase" == "phase2" ]; then
         log "bowtie $bowtie_index_file $QUALS  $params -q $inputs $outname.bowtie.txt"
-        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs "$outname".bowtie.txt >& "$outname".bowtie.out
+        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs "$outname".bowtie.txt >& "$LOG_FILE"
     else
         die "Don't know what to do on phase $phase"
     fi

@@ -46,14 +46,14 @@ function split_pairs() {
     if (( $start >= $len / 2 )); then
         start=$(( $len - $start ))
     fi
-    log "split_pairs::file=$1,start=$2,len=$3"
+    log "split_pairs::file=$1,start=$2,len=$3,TERM=$TERM"
     if [ -f "${base}.unmapped.txt" ]; then
-        result=$(n_split "${base}.unmapped.txt" $start $len)
+        result=$(try n_split "${base}.unmapped.txt" $start $len)
     elif [ -f "${base}.unmapped_1.txt" ] && [ -f "${base}.unmapped_2.txt" ]; then
-        tmp=$(n_split "${base}.unmapped_1.txt" $start $(( $len - $start ))  )
+        tmp=$(try n_split "${base}.unmapped_1.txt" $start $(( $len - $start ))  )
         mv "$tmp" "${tmp}-1.txt"
         result="${tmp}-1.txt"
-        tmp=$(n_split "${base}.unmapped_2.txt" $start $(( $len - $start ))  )
+        tmp=$(try n_split "${base}.unmapped_2.txt" $start $(( $len - $start ))  )
         mv "$tmp" "${tmp}-2.txt"
         result+="|${tmp}-2.txt"
     else
