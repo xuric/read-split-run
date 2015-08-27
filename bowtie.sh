@@ -7,7 +7,7 @@ function set_indexes() {
     if [ -z "$BOWTIE_INDEXES" ] && [ ! -z "$BOWTIE_INDEX_ROOT" ]; then
         BOWTIE_INDEXES="${BOWTIE_INDEX_ROOT}/$1"
     elif [ ! -z "$BOWTIE_INDEXES" ] && [ -z "$BOWTIE_INDEX_ROOT" ]; then
-        : #need something to make sure this is still a thing
+        : # this is okay. NOOP
     else
         die "Don't know where to look for the bowtie indexes"
     fi
@@ -62,7 +62,7 @@ fi
 #    BOWTIE_INDEXES="$BOWTIE_INDEX_ROOT/$1"
 #fi
 
-try set_indexes $1
+#try set_indexes $1
 genome=$1
 if (( $? )) && [ -z "$genome" ]; then
     die "Cannot find genome for $1"

@@ -14,14 +14,14 @@ RSR_TEMP_DIR="${BASE_TEMP_DIR}/splitpairs"
 LOG_DIR="${BASEDIR}/logs"
 BASES_TO_TRIM=2
 if [ -z "$BOWTIE_INDEXES" ]; then
-    BOWTIE_INDEXES=""                            #See INSTALLATION
+    die "No BOWTIE_INDEXES. cannot continue."
 fi
-BOWTIE_INDEX_ROOT=""                          #See INSTALLATION
-REFDIR=""                                    #where the refFlats are
+BOWTIE_INDEX_ROOT=""
+REFDIR="${BOWTIE_INDEXES}"                                    #where the refFlats are
 
 
 #------Programs----------------------
-BOWTIE_PROGRAM="/usr/local/bin/bowtie"            # /path/to/bowtie
+BOWTIE_PROGRAM="bowtie"                           # /path/to/bowtie
 SPLIT_PROGRAM="${BASEDIR}/srr"                    # Program for splitting reads, compiled from split_read_rsr.c
 FORMAT_PROGRAM="${BASEDIR}/sfc"                   # Program for formatting reads, compiled from split_first_column.c
 RSR_PROGRAM="${BASEDIR}/sp4"                      # RSR Program ("split pairs"), compiled from splitPairs.cpp

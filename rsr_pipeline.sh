@@ -142,6 +142,8 @@ log "Re-aligning reads... "
 results=$(align $genome phase2 ${results} $maxGood $destination)
 log "re-align results=${results}" 
 
+#TODO: Possibly integrate split bowtie column here.
+# if (( $(du -m ${results}) > 50000 )); then try do_chrom_split ${results}; fi
 #step 4: split the column into proper format
 log "formatting..." 
 results=$(split_columns ${results})

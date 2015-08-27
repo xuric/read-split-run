@@ -18,7 +18,8 @@ Bowtie 1.0.1 (or later):
     Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net. 
 
 Bowtie Indexes:
-You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory. Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net). 
+You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory. SET THE BOWTIE_INDEXES ENVIRONMENT VARIABLE as per the instructions of bowtie (http://bowtie-bio.sourceforge.net/manual). Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net).
+Note: Normally, bowtie will attempt to guess where the index files are, but because of the necessities below, we cannot do that. you MUSET set the variable.
 
 knownGene reference files:
 
@@ -49,7 +50,7 @@ RSR_TEMP_DIR        location to store intermediate RSR options and output files.
 
 LOG_DIR             location to store diagnostic and operational logs.
 
-BOWTIE_INDEX_ROOT    If your bowtie indexes are separated by directory names under a common directory, specify that place here and leave BOWTIE_INDEXES empty
+BOWTIE_INDEX_ROOT   If your bowtie indexes are separated by directory names under a common directory, specify that place here and leave BOWTIE_INDEXES empty
 
 BOWTIE_INDEXES      If your bowtie indexes are all contained in a single directory, specify that here and leave BOWTIE_INDEX_ROOT empty. 
 
