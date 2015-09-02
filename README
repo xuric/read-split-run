@@ -18,12 +18,17 @@ Bowtie 1.0.1 (or later):
     Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net. 
 
 Bowtie Indexes:
-You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory. SET THE BOWTIE_INDEXES ENVIRONMENT VARIABLE as per the instructions of bowtie (http://bowtie-bio.sourceforge.net/manual). Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net).
-Note: Normally, bowtie will attempt to guess where the index files are, but because of the necessities below, we cannot do that. you MUSET set the variable.
+You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory. SET THE THE BOWTIE_INDEXES ENVIRONMENT VARIABLE as per the instructions of bowtie (http://bowtie-bio.sourceforge.net/manual). Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net). We use the human hg19 genome (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/hg19.ebwt.zip) and mouse mm9 (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/mm9.ebwt.zip).
+Note: Normally, bowtie will attempt to guess where the index files are, but because of the necessities below, we cannot do that. you MUST set the variable.
+Setting the variable example: setenv BOWTIE_INDEXES /usr/local/bowtie/indexes
+
 
 knownGene reference files:
 
 For the genomes to which you plan to align, download their knownGene reference file from UCSC (http://hgdownload.cse.ucsc.edu/downloads.html). Place the knownGene.txt file in the same directory as your bowtie indexes, and CHANGE THE NAME OF THE FILE TO HAVE THE FOLLOWING PATTERN: OrganismAssemblyName.knownGene.txt (i.e. If you plan on using Human assembly hg19, its knownGene.txt should be "hg19.knownGene.txt"; if you plan on using Mouse assembly mm9sp35, make its knownGene file "mm9sp35.knownGene.txt"; these files are CASE SENSITIVE.
+Human hg19 reference can be found here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/knownGene.txt.gz
+Mouse mm9  reference can be found here: http://hgdownload.cse.ucsc.edu/goldenPath/mm9/database/knownGene.txt.gz
+
 
 Furthermore, the splitPairs portion of Read-Split-Run requires a special parsed gene reference with intron/exon boundaries identified. We provide a script to create this file called "refflat_parse_RSW.pl" in the RSR INSTALLATION DIECTORY. Run this script and supply the gene reference file as the input argument...
 Ex:  perl refflat_parse_RSW.pl /usr/local/bowtie/indexes/hg19.knownGene.txt
