@@ -10,22 +10,34 @@ Installing the pipeline:
 
 Perl 5.16 (or later):
     The converter for the gene reference file (see below) requires Perl to run. We tested it with version 5.16, though it is likely that earlier versions will work. Perl can be downloaded from http://www.perl.org .
+To verify your installation of Perl is compatable, check the output of the command; perl --version
+
 
 Python 2.7 (or later):
     The encoding guesser requires that python be installed on the system and its executable in an accessible location. It is likely that earlier versions of python will work, but our tests used version 2.7.5.  Python can be downloaded from https://www.python.org .
+To verify your installation of python is compatable, check the output of the command; python --version
 
 Bowtie 1.0.1 (or later): 
     Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net. 
+To verify your installation of bowtie is compatable, check the output of the command; bowtie --version
 
-Bowtie Indexes:
-You will need bowtie indexes and knownGene files for the genome(s) of your choice. Put your index files in the indexes subdirectory of your bowtie install directory. SET THE THE BOWTIE_INDEXES ENVIRONMENT VARIABLE as per the instructions of bowtie (http://bowtie-bio.sourceforge.net/manual). Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net). We use the human hg19 genome (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/hg19.ebwt.zip) and mouse mm9 (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/mm9.ebwt.zip).
+
+gcc (g++) version 4.8 or better:
+Compiling the associated programs requires gcc version 4.8 or higher (to accommodate features of c++11 that are used in splitpairs). 
+To verify your installation of bowtie is compatable, check the output of the command; gcc --version
+
+When Gcc is installed, one can easily create the necessary binary programs from the src directory by changing directory to the INSTALLATION DIRECTORY and typing 'make'. This will automatically make each of the programs.
+
+Bowtie Index files:
+You will need bowtie index files and knownGene files for the genome(s) of your choice. Put the index files in the indexes subdirectory of your bowtie install directory (if you cannot install there, any directory will work). SET THE THE BOWTIE_INDEXES ENVIRONMENT VARIABLE to the location of the indexes (this is exactly the same as the requirement for running bowtie by itself). 
+Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net). We use the human hg19 genome (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/hg19.ebwt.zip) and mouse mm9 (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/mm9.ebwt.zip).
 Note: Normally, bowtie will attempt to guess where the index files are, but because of the necessities below, we cannot do that. you MUST set the variable.
-Setting the variable example: setenv BOWTIE_INDEXES /usr/local/bowtie/indexes
+Setting the variable example: setenv BOWTIE_INDEXES /usr/local/bowtie/indexes    or,  setenv BOWTIE_INDEXES /net/home/user/rsr/indexes
 
 
 knownGene reference files:
 
-For the genomes to which you plan to align, download their knownGene reference file from UCSC (http://hgdownload.cse.ucsc.edu/downloads.html). Place the knownGene.txt file in the same directory as your bowtie indexes, and CHANGE THE NAME OF THE FILE TO HAVE THE FOLLOWING PATTERN: OrganismAssemblyName.knownGene.txt (i.e. If you plan on using Human assembly hg19, its knownGene.txt should be "hg19.knownGene.txt"; if you plan on using Mouse assembly mm9sp35, make its knownGene file "mm9sp35.knownGene.txt"; these files are CASE SENSITIVE.
+For the genomes to which you plan to align, download and uncompress their knownGene reference file from UCSC (http://hgdownload.cse.ucsc.edu/downloads.html). Place the knownGene.txt file in the same directory as your bowtie indexes, and CHANGE THE NAME OF THE FILE TO HAVE THE FOLLOWING PATTERN: OrganismAssemblyName.knownGene.txt (i.e. If you plan on using Human assembly hg19, its knownGene.txt should be "hg19.knownGene.txt"; if you plan on using Mouse assembly mm9sp35, make its knownGene file "mm9sp35.knownGene.txt"; these files are CASE SENSITIVE.
 Human hg19 reference can be found here: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/knownGene.txt.gz
 Mouse mm9  reference can be found here: http://hgdownload.cse.ucsc.edu/goldenPath/mm9/database/knownGene.txt.gz
 
@@ -33,12 +45,9 @@ Mouse mm9  reference can be found here: http://hgdownload.cse.ucsc.edu/goldenPat
 Furthermore, the splitPairs portion of Read-Split-Run requires a special parsed gene reference with intron/exon boundaries identified. We provide a script to create this file called "refflat_parse_RSW.pl" in the RSR INSTALLATION DIECTORY. Run this script and supply the gene reference file as the input argument...
 Ex:  perl refflat_parse_RSW.pl /usr/local/bowtie/indexes/hg19.knownGene.txt
 It will generate the annotated file "hg19.knownGene.txt.intronBoundry.exonsgaps" 
+To verify your installation of bowtie is compatable, check the output of the command; gcc --version
 
 (editor's note: yes, boundary is misspelled. do not correct it...)
-
-gcc (g++) version 4.8 or better:
-Compiling the associated programs requires gcc version 4.8 or higher (to accommodate features of c++11 that are used in splitpairs). 
-
 
 
 OPTIONAL CONFIGURATION:
