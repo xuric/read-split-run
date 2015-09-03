@@ -111,6 +111,45 @@ if [ ! -d "$LOG_DIR" ]; then
     mkdir "$LOG_DIR" || die "Could not make $LOG_DIR aborting."
 fi
 
+#SANITY CHECK
+#check that the input rna-seq files exist
+deficient=()
+if [[ $3 =~ .*\|.* ]]; then # Paired mode
+    OIFS=$IFS
+    IFS='|' read pair1 pair2 <<< "$3"
+    IFS=$OIFS
+    if [[ $pair1 =~ .*,.* ]]; then
+        OIFS=$IFS
+        IFS=','; for file in $pair1; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+        IFS=$OIFS
+    else
+        if [ -f "$pair1" ]; then deficient+="$pair1 "; fi
+    fi
+else
+    if [[ $3 =~ .*,.* ]]; then
+        OIFS=$IFS
+        IFS=','; for file in $3; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+        IFS=$OIFS
+    else
+        if [ ! -f "$3" ]; then deficient+="$3 "; fi
+    fi
+fi
+
+if (( ${#deficient[@]} > 0 )); then die "Could not find the following input files: ${deficient[@]}"; fi
+
+$BOWTIE_PROGRAM --version >& /dev/null || die "Bowtie not found."
+deficient=()
+if [ ! -f $SPLIT_PROGRAM ]; then deficient+="$SPLIT_PROGRAM "; fi
+if [ ! -f $FORMAT_PROGRAM ]; then deficient+="$FORMAT_PROGRAM " ; fi
+if [ ! -f $RSR_PROGRAM ]; then deficient+="$RSR_PROGRAM " ; fi
+if [ ! -f $COMPARE_PROGRAM ]; then deficient+="$COMPARE_PROGRAM " ; fi
+if [ ! -f $MEASURE_SCRIPT ]; then deficient+="$MEASURE_SCRIPT " ; fi
+if [ ! -f $ALIGN_SCRIPT ]; then deficient+="$ALIGN_SCRIPT " ; fi
+if [ ! -f $SPLIT_SCRIPT ]; then deficient+="$SPLIT_SCRIPT " ; fi
+if [ ! -f $RSR_SCRIPT ]; then deficient+="$RSR_SCRIPT " ; fi
+if [ ! -f $ENCODING_GUESSER ]; then deficient+="$ENCODING_GUESSER "; fi
+
+if (( ${#deficient[@]} > 0 )); then die "The following components of the pipeline are missing: ${deficient[@]}"; fi
 
 #end if..configured
 fi
