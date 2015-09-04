@@ -18,8 +18,8 @@ Python 2.7 (or later):
 To verify your installation of python is compatable, check the output of the command; python --version
 
 Bowtie 1.0.1 (or later): 
-    Ensure that you have bowtie (version 1.0.1 or later) installed in an accessible location (see CONFIGURATION, and DEPENDENCIES, below). It can be downloaded from http://bowtie-bio.sourceforge.net. 
-To verify your installation of bowtie is compatable, check the output of the command; bowtie --version
+    Ensure that you have bowtie (version 1.0.1 or later) install. By default, Read Split Run will look for bowtie in the INSTALLATION DIRECTORY/bowtie, however if you install it in another location, make sure it is in the PATH (see also: CONFIGURATION and DEPENDENCIES, below; it is recommended that the path to bowtie be in the PATH anyway). It can be downloaded from http://bowtie-bio.sourceforge.net. 
+To verify your installation of bowtie is compatable, check the output of the command: bowtie --version
 
 
 gcc (g++) version 4.8 or better:
@@ -32,7 +32,9 @@ Bowtie Index files:
 You will need bowtie index files and knownGene files for the genome(s) of your choice. Put the index files in the indexes subdirectory of your bowtie install directory (if you cannot install there, any directory will work). SET THE THE BOWTIE_INDEXES ENVIRONMENT VARIABLE to the location of the indexes (this is exactly the same as the requirement for running bowtie by itself). 
 Indexes can be found on the bowtie website (http://bowtie-bio.sourceforge.net). We use the human hg19 genome (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/hg19.ebwt.zip) and mouse mm9 (ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/mm9.ebwt.zip).
 Note: Normally, bowtie will attempt to guess where the index files are, but because of the necessities below, we cannot do that. you MUST set the variable.
-Setting the variable example: setenv BOWTIE_INDEXES /usr/local/bowtie/indexes    or,  setenv BOWTIE_INDEXES /net/home/user/rsr/indexes
+Setting the variable examples: 
+in bash: export BOWTIE_INDEXES=/usr/local/bowtie/indexes
+in csh:  setenv BOWTIE_INDEXES /usr/local/bowtie/indexes 
 
 
 refFlat files:
@@ -48,30 +50,34 @@ It will generate the annotated file "hg19.refFlat.txt.intronBoundary.exonsgaps"
 
 
 
-OPTIONAL CONFIGURATION:
+CONFIGURATION (optional):
 
 There is no mandatory configuration that needs be done if you have followed the installation instructions to this point. The following are presented as options for the advanced user.
 
-The configuration file: "rsr_config.sh" contains all the configurable values used by the pipeline. It can be edited with any plain-text editor (nano, vim, etc). You can change the following variables in the USER CONFIGURATION section to suit your disired configuration:
+The configuration file: "rsr_config.sh" contains all the configurable values used by the pipeline. It can be edited with any plain-text editor (nano, vim, etc). You can change the following variables in the USER CONFIGURATION section to suit your needs:
 
 BOWTIE_TEMP_DIR     location to store intermediate bowtie files.
+                    Default: INSTALLATION DIRECTORY/tmp/bowtie
 
 SPLIT_TEMP_DIR      location to store intermediate split reads files.
-
+                    Default: INSTALLATION DIRECTORY/tmp/split
+                    
 RSR_TEMP_DIR        location to store intermediate RSR options and output files.
+                    Default: INSTALLATION DIRECTORY/tmp/splitPairs
 
 LOG_DIR             location to store diagnostic and operational logs.
+                    Default: INSTALLATION DIRECTORY/logs
 
-BOWTIE_INDEX_ROOT   If your bowtie indexes are separated by directory names under a common directory, specify that place here and leave BOWTIE_INDEXES empty
+BOWTIE_PROGRAM      the absolute path to bowtie executable (e.g. /usr/bin/bowtie).
+                    Default: INSTALLATION DIRECTORY/bowtie/bowtie
+                    (if the bowtie executable is not in this directory, RSR will check the PATH).
 
-BOWTIE_INDEXES      If your bowtie indexes are all contained in a single directory, specify that here and leave BOWTIE_INDEX_ROOT empty. 
+REFDIR              Directory containing refFlat files (and gene Intron/exon boundary files). All files for your available genomes must be in this directory.
+                    Default: BOWTIE_INDEXES
 
-BOWTIE              the absolute path to bowtie executable (e.g. /usr/bin/bowtie).
-
-REFDIR              Directory containing knownGene files (and gene Intron/exon boundary files). All files for your available genomes must be in this directory.
-
-BASES_TO_TRIM       How many bases should be trimmed off the right-end of your reads?  Set this according ot the quality of your reads. Default: 0.
-
+BASES_TO_TRIM       How many bases should be trimmed off the right-end of your reads?  Set this according ot the quality of your reads. 
+                    Default: 0.
+                    
 
 All other variables are internal-use and should not be changed. Read the comments in the configuration file for details as to what function they provide.  
 
