@@ -21,13 +21,13 @@ BOWTIE_TEMP_DIR="${BASE_TEMP_DIR}/bowtie"
 SPLIT_TEMP_DIR="${BASE_TEMP_DIR}/split"
 RSR_TEMP_DIR="${BASE_TEMP_DIR}/splitpairs"
 LOG_DIR="${BASEDIR}/logs"
-BASES_TO_TRIM=2
+BASES_TO_TRIM=0
 BOWTIE_INDEX_ROOT=""
 REFDIR="${BOWTIE_INDEXES}"                                    #where the refFlats are
 
 
 #------Programs----------------------
-BOWTIE_PROGRAM="bowtie"                           # /path/to/bowtie
+BOWTIE_PROGRAM="${BASEIDR}/bowtie/bowtie"                           # /path/to/bowtie
 SPLIT_PROGRAM="${BASEDIR}/srr"                    # Program for splitting reads, compiled from split_read_rsr.c
 FORMAT_PROGRAM="${BASEDIR}/sfc"                   # Program for formatting reads, compiled from split_first_column.c
 RSR_PROGRAM="${BASEDIR}/sp4"                      # RSR Program ("split pairs"), compiled from splitPairs.cpp
@@ -41,10 +41,6 @@ export -p TERM=vt100                                        # this seesm to be n
 if [ -z "$LOG_FILE" ] || [ -z "$RUN_ID" ]; then
 export -p RUN_ID="$(date +%F.%s)"
 export -p LOG_FILE="${LOG_DIR}/RSR_${RUN_ID}.log"
-fi
-
-if [ -z "$BOWTIE_INDEXES" ]; then
-    die "No BOWTIE_INDEXES. cannot continue."
 fi
 
 #this sets the location to find the sub-parts of the pipeline
@@ -111,34 +107,52 @@ if [ ! -d "$LOG_DIR" ]; then
     mkdir "$LOG_DIR" || die "Could not make $LOG_DIR aborting."
 fi
 
-#SANITY CHECK
-#check that the input rna-seq files exist
-deficient=()
-if [[ $3 =~ .*\|.* ]]; then # Paired mode
-    OIFS=$IFS
-    IFS='|' read pair1 pair2 <<< "$3"
-    IFS=$OIFS
-    if [[ $pair1 =~ .*,.* ]]; then
+#SANITY CHECKs
+
+#first, BOWTIE_INDEXES for no particular reason
+if [ -z "$BOWTIE_INDEXES" ]; then
+    die "No BOWTIE_INDEXES. cannot continue."
+fi
+
+if [[ ${BASH_SOURCE[0]} != $0 ]]; then
+
+    #check that the input rna-seq files exist
+    deficient=()
+    if [[ $3 =~ .*\|.* ]]; then # Paired mode
         OIFS=$IFS
-        IFS=','; for file in $pair1; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+        IFS='|' read pair1 pair2 <<< "$3"
         IFS=$OIFS
+        if [[ $pair1 =~ .*,.* ]]; then
+            OIFS=$IFS
+            IFS=','; for file in $pair1; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+            IFS=$OIFS
+        else
+            if [ -f "$pair1" ]; then deficient+="$pair1 "; fi
+        fi
     else
-        if [ -f "$pair1" ]; then deficient+="$pair1 "; fi
+        if [[ $3 =~ .*,.* ]]; then
+            OIFS=$IFS
+            IFS=','; for file in $3; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+            IFS=$OIFS
+        else
+            if [ ! -f "$3" ]; then deficient+="$3 "; fi
+        fi
     fi
-else
-    if [[ $3 =~ .*,.* ]]; then
-        OIFS=$IFS
-        IFS=','; for file in $3; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
-        IFS=$OIFS
-    else
-        if [ ! -f "$3" ]; then deficient+="$3 "; fi
-    fi
+
 fi
 
 if (( ${#deficient[@]} > 0 )); then die "Could not find the following input files: ${deficient[@]}"; fi
 
-$BOWTIE_PROGRAM --version >& /dev/null || die "Bowtie not found."
+#check for the pipeline components
 deficient=()
+if [ ! -f $BOWTIE_PROGRAM ]; then
+    bowtie --version >& /dev/null
+    if (( $? > 0 )); then 
+        deficient+="$BOWTIE_PROGRAM "
+    else
+        BOWTIE_PROGRAM=$(which bowtie)
+    fi
+fi
 if [ ! -f $SPLIT_PROGRAM ]; then deficient+="$SPLIT_PROGRAM "; fi
 if [ ! -f $FORMAT_PROGRAM ]; then deficient+="$FORMAT_PROGRAM " ; fi
 if [ ! -f $RSR_PROGRAM ]; then deficient+="$RSR_PROGRAM " ; fi
