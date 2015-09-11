@@ -21,7 +21,6 @@ BOWTIE_TEMP_DIR="${BASE_TEMP_DIR}/bowtie"
 SPLIT_TEMP_DIR="${BASE_TEMP_DIR}/split"
 RSR_TEMP_DIR="${BASE_TEMP_DIR}/splitpairs"
 LOG_DIR="${BASEDIR}/logs"
-BASES_TO_TRIM=0
 BOWTIE_INDEX_ROOT=""
 REFDIR="${BOWTIE_INDEXES}"                                    #where the refFlats are
 
@@ -43,6 +42,7 @@ export -p RUN_ID="$(date +%F.%s)"
 export -p LOG_FILE="${LOG_DIR}/RSR_${RUN_ID}.log"
 fi
 
+BASES_TO_TRIM=0
 #this sets the location to find the sub-parts of the pipeline
 #BASEDIR=$(dirname $(realpath $0))
 
