@@ -26,7 +26,9 @@ REFDIR="${BOWTIE_INDEXES}"                                    #where the refFlat
 
 
 #------Programs----------------------
-BOWTIE_PROGRAM="${BASEIDR}/bowtie/bowtie"                           # /path/to/bowtie
+if [ -z "$BOWTIE_PROGRAM" ]; then
+export -p BOWTIE_PROGRAM="${BASEDIR}/bowtie/bowtie"
+fi
 SPLIT_PROGRAM="${BASEDIR}/srr"                    # Program for splitting reads, compiled from split_read_rsr.c
 FORMAT_PROGRAM="${BASEDIR}/sfc"                   # Program for formatting reads, compiled from split_first_column.c
 RSR_PROGRAM="${BASEDIR}/sp4"                      # RSR Program ("split pairs"), compiled from splitPairs.cpp
@@ -114,56 +116,61 @@ if [ -z "$BOWTIE_INDEXES" ]; then
     die "No BOWTIE_INDEXES. cannot continue."
 fi
 
-if [[ ${BASH_SOURCE[0]} != $0 ]]; then
+function sanity_check() {
+    if [[ ${BASH_SOURCE[0]} != $0 ]]; then
 
-    #check that the input rna-seq files exist
+        #check that the input rna-seq files exist
+        deficient=()
+        if [[ $3 =~ .*\|.* ]]; then # Paired mode
+            OIFS=$IFS
+            IFS='|' read pair1 pair2 <<< "$3"
+            IFS=$OIFS
+            if [[ $pair1 =~ .*,.* ]]; then
+                OIFS=$IFS
+                IFS=','; for file in $pair1; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+                IFS=$OIFS
+            else
+                if [ -f "$pair1" ]; then deficient+="$pair1 "; fi
+            fi
+        else
+            if [[ $3 =~ .*,.* ]]; then
+                OIFS=$IFS
+                IFS=','; for file in $3; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
+                IFS=$OIFS
+            else
+                if [ ! -f "$3" ]; then deficient+="$3 "; fi
+            fi
+        fi
+
+    fi
+
+    if (( ${#deficient[@]} > 0 )); then die "Could not find the following input files(${#deficient[@]}): ${deficient[@]}"; fi
+
+    #check for the pipeline components
     deficient=()
-    if [[ $3 =~ .*\|.* ]]; then # Paired mode
-        OIFS=$IFS
-        IFS='|' read pair1 pair2 <<< "$3"
-        IFS=$OIFS
-        if [[ $pair1 =~ .*,.* ]]; then
-            OIFS=$IFS
-            IFS=','; for file in $pair1; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
-            IFS=$OIFS
+    yell "sanity_check::\$BOWTIE_PROGRAM=$BOWTIE_PROGRAM"
+    if [ ! -f $BOWTIE_PROGRAM ]; then
+        bowtie --version >& /dev/null
+        if (( $? > 0 )); then 
+            deficient+="$BOWTIE_PROGRAM "
         else
-            if [ -f "$pair1" ]; then deficient+="$pair1 "; fi
-        fi
-    else
-        if [[ $3 =~ .*,.* ]]; then
-            OIFS=$IFS
-            IFS=','; for file in $3; do if [ ! -f "$file" ]; then deficient+="$file "; fi; done
-            IFS=$OIFS
-        else
-            if [ ! -f "$3" ]; then deficient+="$3 "; fi
+            export -p BOWTIE_PROGRAM=$(which bowtie)
         fi
     fi
+    yell "sanity_check::\$BOWTIE_PROGRAM=$BOWTIE_PROGRAM"
+    if [ ! -f $SPLIT_PROGRAM ]; then deficient+="$SPLIT_PROGRAM "; fi
+    if [ ! -f $FORMAT_PROGRAM ]; then deficient+="$FORMAT_PROGRAM " ; fi
+    if [ ! -f $RSR_PROGRAM ]; then deficient+="$RSR_PROGRAM " ; fi
+    if [ ! -f $COMPARE_PROGRAM ]; then deficient+="$COMPARE_PROGRAM " ; fi
+    if [ ! -f $MEASURE_SCRIPT ]; then deficient+="$MEASURE_SCRIPT " ; fi
+    if [ ! -f $ALIGN_SCRIPT ]; then deficient+="$ALIGN_SCRIPT " ; fi
+    if [ ! -f $SPLIT_SCRIPT ]; then deficient+="$SPLIT_SCRIPT " ; fi
+    if [ ! -f $RSR_SCRIPT ]; then deficient+="$RSR_SCRIPT " ; fi
+    if [ ! -f $ENCODING_GUESSER ]; then deficient+="$ENCODING_GUESSER "; fi
 
-fi
+    if (( ${#deficient[@]} > 0 )); then die "The following components of the pipeline are missing: ${deficient[@]}"; fi
+}
 
-if (( ${#deficient[@]} > 0 )); then die "Could not find the following input files: ${deficient[@]}"; fi
-
-#check for the pipeline components
-deficient=()
-if [ ! -f $BOWTIE_PROGRAM ]; then
-    bowtie --version >& /dev/null
-    if (( $? > 0 )); then 
-        deficient+="$BOWTIE_PROGRAM "
-    else
-        BOWTIE_PROGRAM=$(which bowtie)
-    fi
-fi
-if [ ! -f $SPLIT_PROGRAM ]; then deficient+="$SPLIT_PROGRAM "; fi
-if [ ! -f $FORMAT_PROGRAM ]; then deficient+="$FORMAT_PROGRAM " ; fi
-if [ ! -f $RSR_PROGRAM ]; then deficient+="$RSR_PROGRAM " ; fi
-if [ ! -f $COMPARE_PROGRAM ]; then deficient+="$COMPARE_PROGRAM " ; fi
-if [ ! -f $MEASURE_SCRIPT ]; then deficient+="$MEASURE_SCRIPT " ; fi
-if [ ! -f $ALIGN_SCRIPT ]; then deficient+="$ALIGN_SCRIPT " ; fi
-if [ ! -f $SPLIT_SCRIPT ]; then deficient+="$SPLIT_SCRIPT " ; fi
-if [ ! -f $RSR_SCRIPT ]; then deficient+="$RSR_SCRIPT " ; fi
-if [ ! -f $ENCODING_GUESSER ]; then deficient+="$ENCODING_GUESSER "; fi
-
-if (( ${#deficient[@]} > 0 )); then die "The following components of the pipeline are missing: ${deficient[@]}"; fi
-
+export -f sanity_check
 #end if..configured
 fi

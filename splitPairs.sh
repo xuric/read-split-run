@@ -21,18 +21,18 @@ function make_options_file() {
     if [ -z $REFDIR ];then
         die "Panic! dunno where the ref files are!" 
     fi
-    if [ ! -f "${REFDIR}/${1}.knownGene.txt" ]; then
-        die "Error: cannot find knownGene file for $1" 
+    if [ ! -f "${REFDIR}/${1}.refFlat.txt" ]; then
+        die "Error: cannot find refFlat file for $1" 
     fi
-    if [ ! -f "${REFDIR}/${1}.knownGene.txt.intronBoundry.exonsgaps" ]; then
+    if [ ! -f "${REFDIR}/${1}.refFlat.txt.intronBoundary.exonsgaps" ]; then
         die "Error: cannot find intron/exon boundry file for $1" 
     fi
 	touch "$OPTSFILE"
     echo "$2"  > $OPTSFILE  #reads file
     echo "$6" >> $OPTSFILE  #maxSplitDistance
     echo "$3" >> $OPTSFILE  #sampleLength
-    echo "${REFDIR}/${1}.knownGene.txt" >> $OPTSFILE  #refFlat
-    echo "${REFDIR}/${1}.knownGene.txt.intronBoundry.exonsgaps" >> $OPTSFILE  #intron/exon boundry
+    echo "${REFDIR}/${1}.refFlat.txt" >> $OPTSFILE  #refFlat
+    echo "${REFDIR}/${1}.refFlat.txt.intronBoundary.exonsgaps" >> $OPTSFILE  #intron/exon boundry
     echo "$5" >> $OPTSFILE  #minSplitDistance
     echo "$7" >> $OPTSFILE  #Support tolerance
     if [ -z "$OUTPUTFILE" ]; then
@@ -57,7 +57,7 @@ function run_rsw() {
         else
             logfile="${LOG_FILE}"
         fi
-        try $RSR_PROGRAM "$OPTSFILE" >& $logfile
+        try $RSR_PROGRAM "$OPTSFILE" >> $logfile
         if [ ! -f "${OUTPUTFILE}.results" ]; then
             log "Panic! rsw failed to generate output file. Check stderr." 
             exit 1

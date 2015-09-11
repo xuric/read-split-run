@@ -13,9 +13,11 @@ source "${BASEDIR}/rsr_config.sh"
 
 if (( $# < 10 )); then
     yell "Not enough arguments."
-    yell "usage: $(basename $0) mode genome readsFile [readsFile2] maxGoodAlignments minSplitSize minSplitdistance maxSplitdistance regionBuffer requiredSupports pathToSaveFesults"
+    yell "usage: $(basename $0) mode genome readsFile [readsFile2] maxGoodAlignments minSplitSize minSplitdistance maxSplitdistance regionBuffer requiredSupports pathToSaveResults"
     die "params($#): $@"
 fi
+
+sanity_check $@
 
 timing_start;
 
