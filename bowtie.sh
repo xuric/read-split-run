@@ -4,12 +4,8 @@ BASEDIR=$(dirname $(realpath $0))
 source "${BASEDIR}/rsr_config.sh"
 
 function set_indexes() {
-    if [ -z "$BOWTIE_INDEXES" ] && [ ! -z "$BOWTIE_INDEX_ROOT" ]; then
+    if [ -n "$BOWTIE_INDEX_ROOT" ]; then
         BOWTIE_INDEXES="${BOWTIE_INDEX_ROOT}/$1"
-    elif [ ! -z "$BOWTIE_INDEXES" ] && [ -z "$BOWTIE_INDEX_ROOT" ]; then
-        : # this is okay. NOOP
-    else
-        die "Don't know where to look for the bowtie indexes"
     fi
     export -p BOWTIE_INDEXES
 }
@@ -27,10 +23,10 @@ function run_bowtie() {
     outname="$BOWTIE_TEMP_DIR/$5"
     if [ "$phase" == "phase1" ]; then
         log "bowtie $bowtie_index_file $QUALS  $params -q $inputs --un ${outname}.unmapped.txt ${outname}.bowtie.txt"
-        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs --un "$outname".unmapped.txt "$outname".bowtie.txt >> "$LOG_FILE"
+        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs --un "$outname".unmapped.txt "$outname".bowtie.txt >> "$LOG_FILE" 2>&1
     elif [ "$phase" == "phase2" ]; then
         log "bowtie $bowtie_index_file $QUALS  $params -q $inputs $outname.bowtie.txt"
-        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs "$outname".bowtie.txt >> "$LOG_FILE"
+        try $BOWTIE_PROGRAM $bowtie_index_file $QUALS $params -q $inputs "$outname".bowtie.txt >> "$LOG_FILE" 2>&1
     else
         die "Don't know what to do on phase $phase"
     fi
@@ -62,7 +58,7 @@ fi
 #    BOWTIE_INDEXES="$BOWTIE_INDEX_ROOT/$1"
 #fi
 
-#try set_indexes $1
+try set_indexes $1
 genome=$1
 if (( $? )) && [ -z "$genome" ]; then
     die "Cannot find genome for $1"

@@ -19,7 +19,11 @@ function make_options_file() {
         rm "$OPTSFILE"
     fi
     if [ -z $REFDIR ];then
-        die "Panic! dunno where the ref files are!" 
+        if [ -n "$BOWTIE_INDEX_ROOT" ]; then
+            REFDIR="$BOWTIE_INDEX_ROOT/$1"
+        else
+            die "Panic! dunno where the ref files are!" 
+        fi
     fi
     if [ ! -f "${REFDIR}/${1}.refFlat.txt" ]; then
         die "Error: cannot find refFlat file for $1" 
