@@ -4,6 +4,13 @@
 #include <strings.h>
 
 
+/*
+  Version history... 
+
+  Oct 27, 2015 - fixed bug with filename of output that was causing
+  filename to be wrong sometimes, which caused the pipeline to also fail. 
+*/
+
 #define SUFFIX ".split1stcolumn"
 
 //D2FC08P1:143:D0KHCACXX:6:1101:1563:1953 2:N:0:-R-68/2	
@@ -54,8 +61,11 @@ void parse(char *filename) {
         return;
     }
     
-    outname = (char *)malloc(sizeof(char) * (strlen(filename)+strlen(SUFFIX)));
-    memset(outname, 0, sizeof(char) * (strlen(filename)+strlen(SUFFIX)));
+    // bug fixed on Oct 27, 2015 where malloc was not allocating room for the NULL byte
+    // at the end of the string.  this caused the filename to be wrong sometimes, causing
+    // the pipeline to fail sometimes.
+    outname = (char *)malloc(sizeof(char) * (strlen(filename)+strlen(SUFFIX)+1));
+    memset(outname, 0, sizeof(char) * (strlen(filename)+strlen(SUFFIX)+1));
     sprintf(outname, "%s%s",filename,SUFFIX);
     outname[strlen(filename)+strlen(SUFFIX)] = 0;
     if (!(out = fopen(outname, "w"))) {
