@@ -1,13 +1,37 @@
 /*
-  To compile: g++ splitPairs.cpp -o sp -O4 -std=c++11
-  To run:     ./sp options.txt
-  where options.txt is an options file.  If the program is run
-  with no command-line arguments it by default processes 
-  RSW_test.txt with the same parameters as the scripts downloaded
-  from Yongsheng Bai's website.  When you run the program it
-  prints which files output is written to.
+  File:        splitPairs.cpp
 
-Modification history...
+  Copyright 2015 Jeff Kinne, Yongheng Bai, Brandon Donham.
+  Permission to use for academic, non-profit purposes is granted, in which case this
+  copyright notice should be maintained and original authors acknowledged.
+
+  Author:      Jeff Kinne, jkinne@cs.indstate.edu
+
+  Contents:    Program to take alignments of pieces of unaligned reads and determine
+               which could be "split" or "matched" pairs - indicating that the
+               unaligned read resulted from a splice.  Also, determine which
+               matched pairs support each other (resulted from the same splice junction).
+
+  To compile: g++ splitPairs.cpp -o sp -O4 -std=c++11
+
+  To run:     ./sp options.txt
+
+              Where options.txt is an options file.  If the program is run
+              with no command-line arguments it by default processes
+              RSW_test.txt with the same parameters as the scripts downloaded
+              from Yongsheng Bai's website.  When you run the program it
+              prints which files output is written to.  See readOptionsFromFile
+              function for the order of the parameters in the options file.
+
+Modification history...  
+
+11/24/2015 - Modify RSW.h and this file to print out the actual sequence for split pairs.
+             This will appear in the output in the .results files.  
+           - Update comments in this file and RSW.h.  Replace %i with %li where required
+             for 64 bit systems (when printing results of time(NULL) or vector.size())
+
+8/15/2015 - version 1.0.0 of RSR on github.
+
 * sp4 - 7/30/2015
 * 7/30/2015 - fix bug in computing supporting reads that appeared in sp3.
 * 7/30/2015 - fixed bug where compare_data was being used in main loop that computes
@@ -45,31 +69,46 @@ using namespace std;
 #include "RSW.h"
 
 
-int maxDistance;
-int sampleLength;
-int minSpliceLength;
-int supportPosTolerance;
-char const *sampleDataFile;
-char const *refFlatFile;
-char const *refFlatBoundaryFile;
-char const *resultsBaseName;
-int minSupportingReads;
+// parameters input from options file
+int maxDistance;  // max difference in aligned pieces to be considered matched pair
+int sampleLength; // length of reads in this data set
+int minSpliceLength; // minimum size of splice to consider
+int supportPosTolerance; // "buffer boundary" parameter for determining supporting reads
+int minSupportingReads;  // only output junctions with at least this many supporting reads
+char const *sampleDataFile; // input file name
+char const *refFlatFile;    // refFlat file of gene locations
+char const *refFlatBoundaryFile; // refFlat file of known intron/extron boundaries
+char const *resultsBaseName;     // base file name used for output file names
 
 char buff[MAX_STR_LEN];
+
 char options[MAX_STR_LEN];
 
-time_t beginTime, endTime;
+time_t beginTime, endTime;  // for keeping track of running time of program
 
+// string table is used to reduce memory usage of program.  for any string
+// we need we store it in the string table and then only use the pointer to the
+// string any time we need it.  So two records from the input file with the same
+// read id won't take up twice as much memory.  See reading of data file for
+// how this works.
 unordered_set<string> stringTable;
+
+// used in printing of results to avoid printing multiple junction sites
+// multiple times
 unordered_set<const char *> readIdsReported;
 
-vector<struct RSW> data;
-vector<struct RSW_Known> data_known;
-vector<struct RSW_Boundaries> data_boundaries;
-const char unfound_string[100] = "UNFOUND_";
-vector<RSW_splice *> data_splice;
-int numDifferentReads;
+// data read into the program
+vector<struct RSW> data; // from input file of alignments of pieces of unaligned reads
+vector<struct RSW_Known> data_known; // from refFlat
+vector<struct RSW_Boundaries> data_boundaries; // from refFlat intron/extron boundaries
 
+const char unfound_string[100] = "UNFOUND_";   // gene name of any junction outside of genes
+
+vector<RSW_splice *> data_splice; // used to store possible jucntions, see RSW.h for RSW_splice definition
+
+int numDifferentReads; // counter...
+
+// function not currently used
 int compute_hash(RSW *d) {
   int h = 1, i;
   for(i=0; d->id[i] != '\0'; i++) h = h * d->id[i] % SHRT_MAX;
@@ -82,7 +121,16 @@ int compute_hash(RSW *d) {
 char sLine[MAX_LINE+1];
 char temp[MAX_LINE+1];
 
+/*
+  Function: read_data, read in data file into data vector
+
+  Parameters: filename - file to open and read
+
+  Note: if file is .gz or .lrz then attempt to unzip before reading.  This will
+  only work if gunzip and/or lrunzip can be run from the current directory.
+*/
 void read_data(const char *filename) {
+  // open file for reading (from pipe if trying to unzip)
   FILE *f;
   int len = strlen(filename);
   if (len > 3 && strcmp(filename+len-3,".gz")==0) {
@@ -96,6 +144,7 @@ void read_data(const char *filename) {
   else f = fopen(filename, "r");
   if (f == NULL) {printf("Error reading from file %s\n", filename); exit(0); }
 
+  // read data file one line at a time.
   int result=1;
   while (result > 0) {
     int i; char dir;
@@ -106,38 +155,41 @@ void read_data(const char *filename) {
       delete r;
       break;
     }
+
+    // break line into fields, separated by tab
     char *tempA = strtok(sLine, "\t");
     i=0;
     while (tempA != NULL) {
       string temp = tempA; temp.shrink_to_fit();
       pair<unordered_set<string>::iterator,bool> result;
       switch (i) {
-      case 0:
+      case 0: // id of read
+        // put into string table and store pointer to string.  note
+        // that insert just returns a pointer if the string already was in the string table.
 	result = stringTable.insert(temp);
 	r->id = (result.first)->c_str();
-
-	//r->id = (char *)malloc((strlen(temp)+1)*sizeof(char));
-	//strcpy(r->id, temp);
 	break;
-      case 1:
+      case 1: // side
 	r->side = temp[0];
 	break;
-      case 2:
+      case 2: // length of piece
 	r->length = atoi(temp.c_str());
 	break;
-      case 3:
+      case 3: // direction
 	r->direction = temp[0];
 	break;
-      case 4:
+      case 4: // chromosome
 	result = stringTable.insert(temp);
 	r->chromosome = (result.first)->c_str();
-	//r->chromosome = (char *) malloc(sizeof(char) * (strlen(temp)+1));
-	//strcpy(r->chromosome, temp);
 	break;
-      case 5:
+      case 5: // position
 	r->position = atol(temp.c_str());
 	break;
-      case 8:
+      case 6: // sequence 
+        result = stringTable.insert(temp);
+        r->sequence = (result.first)->c_str();
+        break;
+      case 8: // count, unused currently
 	r->count = atoi(temp.c_str());
 	break;
       }
@@ -147,16 +199,20 @@ void read_data(const char *filename) {
     }
     if (i < 9) {delete r; break;}
 
-    r->hash = compute_hash(r);
-    data.push_back(*r);
+    r->hash = compute_hash(r); // not currently used
+    data.push_back(*r); // save into vector
     delete r;
 
-    //if (data.size() >= 15000000) break; // cut off early, for debugging.
+    //if (data.size() >= 15000000) break; // cut off early, for debugging to prevent program from running for too long.
   }
 
   fclose(f);
 }
 
+/*
+  Function: read_knownGene, similar to read_data but read the format of the
+            refFlat file of gene locations
+*/
 void read_knownGene(const char *filename) {
   FILE * f = fopen(filename, "r");
   if (f == NULL) {printf("Error reading from file %s\n", filename); exit(0); }
@@ -180,23 +236,14 @@ void read_knownGene(const char *filename) {
       case 0:
 	result = stringTable.insert(temp);
 	rk->id1 = (result.first)->c_str();
-
-	//rk->id1 = (char *)malloc((strlen(temp)+1)*sizeof(char));
-	//strcpy(rk->id1, temp);
 	break;
       case 1:
 	result = stringTable.insert(temp);
 	rk->id2 = (result.first)->c_str();
-
-	//rk->id2 = (char *)malloc((strlen(temp)+1)*sizeof(char));
-	//strcpy(rk->id2, temp);
 	break;
       case 2:
 	result = stringTable.insert(temp);
 	rk->chromosome = (result.first)->c_str();
-
-	//rk->chromosome = (char *) malloc(sizeof(char) * (strlen(temp)+1));
-	//strcpy(rk->chromosome, temp);
 	break;
       case 3:
 	rk->direction = temp[0];
@@ -226,6 +273,10 @@ void read_knownGene(const char *filename) {
   fclose(f);
 }
 
+/*
+  Function: read_boundaries, similar to read_data but read the format of the
+            refFlat file of intron/extron boundaries.
+*/
 void read_boundaries(const char *filename) {
   FILE * f = fopen(filename, "r");
   if (f == NULL) {printf("Error reading from file %s\n", filename); exit(0); }
@@ -249,23 +300,14 @@ void read_boundaries(const char *filename) {
       case 0:
 	result = stringTable.insert(temp);
 	rk->id1 = (result.first)->c_str();
-
-	//rk->id1 = (char *)malloc((strlen(temp)+1)*sizeof(char));
-	//strcpy(rk->id1, temp);
 	break;
       case 1:
 	result = stringTable.insert(temp);
 	rk->id2 = (result.first)->c_str();
-
-	//rk->id2 = (char *)malloc((strlen(temp)+1)*sizeof(char));
-	//strcpy(rk->id2, temp);
 	break;
       case 2:
 	result = stringTable.insert(temp);
 	rk->chromosome = (result.first)->c_str();
-
-	//rk->chromosome = (char *) malloc(sizeof(char) * (strlen(temp)+1));
-	//strcpy(rk->chromosome, temp);
 	break;
       case 3:
 	rk->direction = temp[0];
@@ -301,8 +343,13 @@ void read_boundaries(const char *filename) {
   fclose(f);
 }
 
+/*
+  Function:   compare_data, used for sorting input data
+
+  Sorts based on id, direction, chromosome - all must be the same
+  if two pieces were from the same read
+*/
 bool compare_data(RSW const &aa, RSW const &bb) {
-  //int temp = strcmp(aa.id, bb.id);
   int temp = aa.id-bb.id;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -312,7 +359,6 @@ bool compare_data(RSW const &aa, RSW const &bb) {
   else if (bb.direction < aa.direction)
     return false;
 
-  //temp = strcmp(aa.chromosome, bb.chromosome);
   temp = aa.chromosome-bb.chromosome;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -320,8 +366,12 @@ bool compare_data(RSW const &aa, RSW const &bb) {
   return false;
 }
 
+/*
+  Function:   compare_dataToSort, used for sorting input data
+
+  Sorts based on id, direction, chromosome, position
+*/
 bool compare_dataToSort(RSW const &aa, RSW const &bb) {
-  //int temp = strcmp(aa.id, bb.id);
   int temp = aa.id-bb.id;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -331,7 +381,6 @@ bool compare_dataToSort(RSW const &aa, RSW const &bb) {
   else if (bb.direction < aa.direction)
     return false;
 
-  //temp = strcmp(aa.chromosome, bb.chromosome);
   temp = aa.chromosome-bb.chromosome;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -341,8 +390,12 @@ bool compare_dataToSort(RSW const &aa, RSW const &bb) {
 }
 
 
+/*
+  Function:  compare_data_known, used for sorting results from refFlat file
+
+  Sort based on chromosome and position.
+*/
 bool compare_data_known(RSW_Known const &aa, RSW_Known const &bb) {
-  //int temp = strcmp(aa.chromosome, bb.chromosome);
   int temp = aa.chromosome-bb.chromosome;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -350,14 +403,23 @@ bool compare_data_known(RSW_Known const &aa, RSW_Known const &bb) {
   return aa.position1 < bb.position1;
 }
 
+/*
+  Function:   compare_spliceBySupport, used for sorting junctions
+
+  Sorts based on number of supporting reads - consider higher ones first.
+*/
 bool compare_spliceBySupport(RSW_splice *aa, RSW_splice *bb) {
   if (bb->supported_reads.size() < aa->supported_reads.size()) return true;
   else return false;
 }
 
-// sort by chromosome, length fo splice, # supporting reads - used in deciding which splices to print
+/*
+  Function:   compare_spliceByChromLen, used for sorting junctions
+
+  Sorts by chromosome, length of splice, number of supporting reads - used in deciding
+  which splices to print.
+*/
 bool compare_spliceByChromLen(RSW_splice *aa, RSW_splice *bb) {
-  //int temp = strcmp(aa->chromosome, bb->chromosome);
   int temp = aa->chromosome-bb->chromosome;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -368,13 +430,16 @@ bool compare_spliceByChromLen(RSW_splice *aa, RSW_splice *bb) {
   else if (temp > 0) return false;
 
   if (bb->supported_reads.size() < aa->supported_reads.size()) return true;
-  //if (aa->positionSmaller < bb->positionSmaller) return true;
   return false;
 }
 
-// sort by chromosome, length of splice, position - used for calculating supporting reads
+/*
+  Function: compare_spliceByChromPos, used for sorting junctions
+
+  Sorts based on chromosome, splice length, position - used in sorting
+  before computing supporting reads.
+*/
 bool compare_spliceByChromPos(RSW_splice *aa, RSW_splice *bb) {
-  //int temp = strcmp(aa->chromosome, bb->chromosome);
   int temp = aa->chromosome-bb->chromosome;
   if (temp < 0) return true;
   else if (temp > 0) return false;
@@ -389,7 +454,11 @@ bool compare_spliceByChromPos(RSW_splice *aa, RSW_splice *bb) {
 }
 
 
+/*
+  Function: readOptionsFromFile, reads parameters for program
 
+  Options assumed to be one per line in a predefined order.
+*/
 void readOptionsFromFile(const char *filename) {
   FILE * fOptions = fopen(filename, "r");
   if (fOptions == NULL) { printf("Error opening file %s\n", filename); exit(0); }
@@ -423,6 +492,13 @@ void readOptionsFromFile(const char *filename) {
   minSupportingReads = atoi(fields[8]);
 }
 
+/*
+  Function:  setDefaultOptions, sets some default options if now options
+             file is given on the command-line.
+
+  Useful for debugging - set the default options to be whatever you are testing,
+  so don't have to type in name of options file each time you run the program.
+*/
 void setDefaultOptions() {
   sampleDataFile = "RSW_test.txt";
   maxDistance = 40000;
@@ -439,6 +515,12 @@ void setDefaultOptions() {
   printf("And make sure options file has options in order, each on their own line with no extra lines.\n");
 }
 
+/*
+  Function:  printCurrentOptions, print options to given file pointer.
+
+  Print to file pointer, so can print the options that were used to stdout and/or
+  to output files with results.
+*/
 void printCurrentOptions(FILE *f) {
   fprintf(f, "Running with options...\n"
 	  "  file with read data          %s\n"
@@ -457,8 +539,10 @@ void printCurrentOptions(FILE *f) {
   }
 }
 
+// files we will write out to
 FILE * fKnown, *fUnknown, *fKnownFull, *fUnknownFull, *fSplitPairs;
 
+// open output files to be ready to write out to them.
 void openOutputFiles() {
   sprintf(buff,"%s.results", resultsBaseName);
   fKnown = fopen(buff, "w");
@@ -491,19 +575,30 @@ void openOutputFiles() {
 	 "   %s\n", buff);
 }
 
+/*
+  Function:  printSplice, print a given junction to the given opened file
+
+*/
 void printSplice(FILE *f, RSW_splice *sp) {
   fprintf(f,
-	  "%s\t%s\t%li\t%li\t%li--%li\t%s",
-	  sp->geneName, sp->chromosome, 
-	  sp->supported_reads.size(),
-	  sp->positionLarger-sp->positionSmaller, 
-	  sp->minSmallSupport,sp->maxLargeSupport,
-	  //sp->positionSmaller, sp->positionLarger, 
-	  sp->novel ? "Novel" : "*"
-	  );
+          "%s\t%s\t%li\t%li\t%li--%li\t%s\t%s--%s", 
+          sp->geneName, sp->chromosome,
+          sp->supported_reads.size(),
+          sp->positionLarger-sp->positionSmaller,
+          sp->minSmallSupport,sp->maxLargeSupport,
+          sp->novel ? "Novel" : "*",
+	  sp->sequenceSmaller, sp->sequenceLarger 
+
+          );
 }
 
 
+/*
+  Function:   updateSpliceSupport - compare the two junctions and put
+              each other into each others list of supporting reads
+              if they support each other and haven't been put into
+              each other's list of supporting reads yet.
+*/
 void updateSpliceSupport(RSW_splice *splice1, RSW_splice *splice2) {
 
   for(int i=0; i < 2; i++) {
@@ -524,6 +619,11 @@ void updateSpliceSupport(RSW_splice *splice1, RSW_splice *splice2) {
   }
 }
 
+/*
+  Function:  printStats, prints statistics gathered so far to the
+             opened file - useful for debugging to see some partial
+             information as each phase of the program finishes.
+*/
 void printStats(FILE *f) {
   FILE *fStatus = fopen("/proc/self/status","r");
   char s[1000], mem[20]="", units[20]="";
@@ -537,14 +637,14 @@ void printStats(FILE *f) {
 
   endTime = time(NULL);
   fprintf(f, "Finished processing data, results written to files.\n");
-  fprintf(f, "Number of entries in data file:             %i\n", data.size());
+  fprintf(f, "Number of entries in data file:             %li\n", data.size());
   fprintf(f, "Number of different reads:                  %i\n", numDifferentReads);
-  fprintf(f, "Number of entries in refFlat file:          %i\n", data_known.size());
-  fprintf(f, "Number of entries in refFlat boundary file: %i\n", data_boundaries.size());
-  fprintf(f, "Number of matches:                          %i\n", data_splice.size());
-  fprintf(f, "String table size:                          %i\n", stringTable.size());
+  fprintf(f, "Number of entries in refFlat file:          %li\n", data_known.size());
+  fprintf(f, "Number of entries in refFlat boundary file: %li\n", data_boundaries.size());
+  fprintf(f, "Number of matches:                          %li\n", data_splice.size());
+  fprintf(f, "String table size:                          %li\n", stringTable.size());
   fprintf(f, "VmRSS, memory resident set size:            %s %s\n", mem, units);
-  fprintf(f, "Total time to process:                      %i seconds\n", endTime-beginTime);
+  fprintf(f, "Total time to process:                      %li seconds\n", endTime-beginTime);
   fprintf(f, "\n");
 }
 
@@ -553,10 +653,13 @@ int main(int argc, char *argv[]) {
 
   beginTime = time(NULL);
 
+  // read options, from file or default options
   if (argc > 1) 
     readOptionsFromFile(argv[1]);
   else 
     setDefaultOptions();
+
+  // write out options to all output files and stdout
 
   openOutputFiles();
 
@@ -571,22 +674,22 @@ int main(int argc, char *argv[]) {
   // read from refFlat file into data_known array, 
   read_knownGene(refFlatFile);
   sort(data_known.begin(), data_known.end(), compare_data_known);
-  printf("Done reading/sorting refFlat, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done reading/sorting refFlat, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // read from refFlat boundary file into data_boundaries array, 
   read_boundaries(refFlatBoundaryFile);
-  printf("Done reading refFlat intron/exon boundaries, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done reading refFlat intron/exon boundaries, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // read the read data
   read_data(sampleDataFile);
-  printf("Done reading read data, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done reading read data, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // sort the read data
   sort(data.begin(), data.end(), compare_dataToSort);
-  printf("Done sorting read data, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done sorting read data, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // look at all pairs of read segments, looking for matches
@@ -638,9 +741,7 @@ int main(int argc, char *argv[]) {
 	if (data_splice[i]->positionSmaller != endSmaller ||
 	    data_splice[i]->positionLarger != endLarger ||
 	    data_splice[i]->id != data[left].id ||
-	    //strcmp(data_splice[i]->id, data[left].id) != 0 ||
 	    data_splice[i]->chromosome != data[left].chromosome) 
-	  //strcmp(data_splice[i]->chromosome, data[left].chromosome) != 0) 
 	  continue;
 	break;
       }
@@ -653,7 +754,6 @@ int main(int argc, char *argv[]) {
       int k; int foundInGene = 0;
       for(k=0; k < data_known.size(); k++) {
 	if ((((data[left].chromosome == data_known[k].chromosome) &&
-	      //if ((((strcmp(data[left].chromosome, data_known[k].chromosome) == 0) &&
 	      (data[left].position >= data_known[k].position1 &&
 	       data[right].position >= data_known[k].position1) &&
 	      (data[left].position <= data_known[k].position2 &&
@@ -664,10 +764,8 @@ int main(int argc, char *argv[]) {
 	}
       }
       int geneIndex = k;
-      //if (!found) printf("UNFOUND_\t"); // not found in any known gene.
-      //else printf("%s\t", data_known[k].id1);
 
-      // add this splice match to the data_splice vector.
+      // make a new splice record and put into vector of splices
       RSW_splice *sp = new RSW_splice;
       sp;
       if (foundInGene) {
@@ -683,8 +781,18 @@ int main(int argc, char *argv[]) {
       sp->direction = data[left].direction;
       sp->positionSmaller = sp->minSmallSupport = endSmaller;
       sp->positionLarger = sp->maxLargeSupport = endLarger;
-      //sp->reported = false;
       sp->supported_reads.insert({sp->id, sp});
+
+      if (data[left].position < data[right].position) {
+        sp->sequenceSmaller = data[left].sequence;
+        sp->sequenceLarger = data[right].sequence;
+      }
+      else {
+        sp->sequenceSmaller = data[right].sequence;
+        sp->sequenceLarger = data[left].sequence;
+      }
+
+
       //#pragma omp critical
       {
 	data_splice.push_back(sp);
@@ -692,17 +800,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("Done finding matched pairs, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done finding matched pairs, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
-
-  //fclose(fKnown); fclose(fKnownFull); fclose(fUnknown); fclose(fUnknownFull); fclose(fSplitPairs);
-  //exit(0);
-
 
   // sort splices by chromosome and length
   sort(data_splice.begin(), data_splice.end(), compare_spliceByChromPos);
 
-  printf("Done sorting matched pairs, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done sorting matched pairs, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
 
@@ -717,11 +821,9 @@ int main(int argc, char *argv[]) {
       // because splices are sorted by chromosome and length, if these don't match then 
       // can break sp2 loop.
       if (data_splice[sp1]->chromosome != data_splice[sp2]->chromosome) break;
-      //if (strcmp(data_splice[sp1]->chromosome, data_splice[sp2]->chromosome) != 0) break;
       if (abs(data_splice[sp1]->positionLarger - data_splice[sp1]->positionSmaller) != 
 	  abs(data_splice[sp2]->positionLarger - data_splice[sp2]->positionSmaller)) break; // splice length must be the same
       if (data_splice[sp1]->geneName != data_splice[sp2]->geneName) break; // ???
-      //if (strcmp(data_splice[sp1]->geneName, data_splice[sp2]->geneName) != 0) break;
 
       // difference in where the splice is, 0 for exact match.  if doesn't match, 
       // continue to next sp2.
@@ -736,48 +838,22 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("Done computing supporting reads, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done computing supporting reads, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // sort splices by chromosome and length, and # supporting reads
   sort(data_splice.begin(), data_splice.end(), compare_spliceByChromLen);
 
-  printf("Done sorting matched pairs again, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done sorting matched pairs again, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
-  // set anything that is included within another splice region, or the same splice region,
-  // as already reported.  if saying something is reported, take one with larger supporting reads as
-  // one to print.
-  /*  for(sp1=0; sp1 < data_splice.size(); sp1++) {
-    if (data_splice[sp1]->reported) continue; // already reported sp1, so go to next.
-
-    for(sp2=sp1+1; sp2 < data_splice.size(); sp2++) {
-      // sorted by chromosome and length, if those don't match then not supporting each other, so 
-      // go to next sp1.
-      if (data_splice[sp1]->chromosome != data_splice[sp2]->chromosome) break;
-      //if (strcmp(data_splice[sp1]->chromosome, data_splice[sp2]->chromosome) != 0) break;
-      if (abs(data_splice[sp1]->positionLarger - data_splice[sp1]->positionSmaller) != 
-	  abs(data_splice[sp2]->positionLarger - data_splice[sp2]->positionSmaller)) break; // splice length must be the sam
-
-      if (data_splice[sp2]->reported) continue; // already not reporting sp2, so go to next.
-
-      int m1 = data_splice[sp1]->minSmallSupport - data_splice[sp2]->minSmallSupport;
-      int m2 = data_splice[sp1]->maxLargeSupport - data_splice[sp2]->maxLargeSupport;
-      if (m1 <= 0 && m2 >= 0) {// splice sp2 region included in splice sp1 region
-	// and # reads of sp2 should be <= # reads of sp1 since sorted by that ordering
-	// so choose not to report sp2.
-	data_splice[sp2]->reported = true;
-      }
-    }
-    }*/
-
-  printf("Done filtering matched pairs, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done filtering matched pairs, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   endTime = time(NULL);
 
 
-  printf("Done calculating/filtering supporting reads, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done calculating/filtering supporting reads, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // print the splice results.  start with the statistics
@@ -791,36 +867,41 @@ int main(int argc, char *argv[]) {
   int k;
 
 
-  // save all the splices, and reads that support each one.
-  fprintf(fSplitPairs, "Line No\tId\tGene\tChr\tStrand\tSplice region\tSupporting reads\tSupporting splice range\n");
+  // save all the splices, and reads that support each one into .splitPairs file - this is
+  // the full results, with many duplicates of splices.  The file also can be HUGE, so
+  // generally this file will often get deleted unless needed for debugging.
+  fprintf(fSplitPairs, "Line No\tId\tGene\tChr\tStrand\tSplice region\tSupporting reads\tSupporting splice range\tBracketed sequence\n"); 
   for(k=0; k < data_splice.size(); k++) {
-    fprintf(fSplitPairs, "%s\t%s\t%s\t%c\t%i-%i\t%i\t%i-%i\n",
-	    data_splice[k]->id, data_splice[k]->geneName, 
-	    data_splice[k]->chromosome, data_splice[k]->direction,
-	    data_splice[k]->positionSmaller,data_splice[k]->positionLarger,
-	    data_splice[k]->supported_reads.size(),
-	    data_splice[k]->minSmallSupport,data_splice[k]->maxLargeSupport);
+    fprintf(fSplitPairs, "%s\t%s\t%s\t%c\t%li-%li\t%li\t%li-%li\t%s-%s\n", 
+            data_splice[k]->id, data_splice[k]->geneName,
+            data_splice[k]->chromosome, data_splice[k]->direction,
+            data_splice[k]->positionSmaller,data_splice[k]->positionLarger,
+            data_splice[k]->supported_reads.size(),
+            data_splice[k]->minSmallSupport,data_splice[k]->maxLargeSupport,
+	    data_splice[k]->sequenceSmaller,data_splice[k]->sequenceLarger
+            );
 
     for(auto &x: data_splice[k]->supported_reads)
-      fprintf(fSplitPairs, "%s, ", x.second->id);
+      fprintf(fSplitPairs, "%s %li--%li %s--%s, ", x.second->id, x.second->positionSmaller, x.second->positionLarger, x.second->sequenceSmaller, x.second->sequenceLarger); 
     fprintf(fSplitPairs, "\n");
   }
 
-  // save the tabulated results.
-  fprintf(fKnown, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\n");
-  fprintf(fUnknown, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\n");
-  fprintf(fKnownFull, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\n");
-  fprintf(fUnknownFull, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\n");
+  // save the tabulated results.  the fKnown file is the only one normally looked at.
+  // fKnownFull has the same information as fKnown, but also has the list of supporting reads for each junction.
+  // fUnknown and fUnknownFull are for junctions not within genes.
+  fprintf(fKnown, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\tBracketed sequence\n"); 
+  fprintf(fUnknown, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\tBracketed sequence\n");
+  fprintf(fKnownFull, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\tBracketed sequence\n");
+  fprintf(fUnknownFull, "GeneName\tChromosome\t# supporting reads\tsplice length\trange of supporting reads\tNovel or not (*)\tBracketed sequence\n");
   FILE * f, *fFull;
   for(k=0; k < data_splice.size(); k++) {
+    // if read already reported, don't report it again.
     if (readIdsReported.find(data_splice[k]->id) != readIdsReported.end()) {continue;}
-
-    /*    if (data_splice[k]->reported) {continue;}  // if already reported as supporting another read, don't print it.
-	  data_splice[k]->reported = true;*/
 
     // if doesn't have enough supporting reads, don't print it
     if (data_splice[k]->supported_reads.size() < minSupportingReads) continue;
 
+    // will be reported, so log that.
     readIdsReported.insert(data_splice[k]->id);
 
     // check if novel or not.
@@ -833,7 +914,7 @@ int main(int argc, char *argv[]) {
 	  abs(data_splice[k]->maxLargeSupport-data_boundaries[j].position2) <= supportPosTolerance)
 	break;
     }
-    if (j < data_boundaries.size()) 
+    if (j < data_boundaries.size())  // if found in the boundaries data, not novel
       data_splice[k]->novel = false;
 
     // going into known file or unknown
@@ -851,10 +932,10 @@ int main(int argc, char *argv[]) {
     // print out full results, that includes id's of supporting reads
     printSplice(fFull, data_splice[k]);
 
+    // print out full results, that includes id's of supporting reads
     fprintf(fFull, "\t");
     for(auto& x: data_splice[k]->supported_reads) {
       fprintf(fFull,", %s", x.second->id);
-      //x.second->reported = true; // already reported this splice as supporting another read that has higher support, so don't report it again
       readIdsReported.insert(x.second->id);
     }
     fprintf(fFull, "\n");
@@ -862,7 +943,7 @@ int main(int argc, char *argv[]) {
 
   fclose(fKnown); fclose(fKnownFull); fclose(fUnknown); fclose(fUnknownFull); fclose(fSplitPairs);
 
-  printf("Done saving results, total time elapsed %i seconds\n", time(NULL)-beginTime);
+  printf("Done saving results, total time elapsed %li seconds\n", time(NULL)-beginTime);
   printStats(stdout);
 
   // free memory.  good to do so we can run a memory checker and verify

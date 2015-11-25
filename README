@@ -26,7 +26,7 @@ gcc (g++) version 4.8 or better:
 Compiling the associated programs requires gcc version 4.8 or higher (to accommodate features of c++11 that are used in splitpairs). 
 To verify your installation of bowtie is compatable, check the output of the command; gcc --version
 
-When Gcc is installed, one can easily create the necessary binary programs from the src directory by changing directory to the INSTALLATION DIRECTORY and typing 'make'. This will automatically make each of the programs.
+When Gcc is installed, one can easily create the necessary binary programs from the src directory by changing directory to the INSTALLATION DIRECTORY and typing 'make'. This will automatically make each of the programs.  Note that binaries are included in the package.  These binaries were compiled on linux, and may or may not work on your system.  It is recommended to run 'make' to compile binaries for your system before use.
 
 Bowtie Index files:
 You will need bowtie index files and knownGene files for the genome(s) of your choice. Put the index files in the indexes subdirectory of your bowtie install directory (if you cannot install there, any directory will work). SET THE THE BOWTIE_INDEXES ENVIRONMENT VARIABLE to the location of the indexes (this is exactly the same as the requirement for running bowtie by itself). 
