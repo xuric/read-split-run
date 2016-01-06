@@ -30,7 +30,7 @@ FILE *pick_file(char *chr) {
             sprintf(fn,"%s.%s%s",prefix,chr,SUFFIX);
         }
         if (!(chrFiles[id] = fopen(fn,"w"))) {
-            fprintf(stderr,"Panic! Cannot open chrom file %s for writing!\n");
+ 	    fprintf(stderr,"Panic! Cannot open chrom file %s for writing!\n", fn);
             perror("");
             fprintf(stderr,"Ignoring.");
             return 0;
