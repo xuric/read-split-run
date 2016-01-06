@@ -39,7 +39,7 @@ FILE *pick_file(char *chr) {
     //fprintf(stderr,"pick_file:: guessing file %i for %s\n",id,chr+3);
     if (!chrFiles[id]) {
         char *fn;
-        int sz = sizeof(char) * (strlen(fn_chr)+strlen(prefix)+strlen(SUFFIX)+1);
+        int sz = sizeof(char) * (strlen(fn_chr)+strlen(prefix)+strlen(SUFFIX)+1+1); // bug fix 6 jan 2016, added +1 to include space for terminating NULL character
         fn = (char *)malloc(sizeof(char) * sz);
         memset(fn, 0, sz);
         sprintf(fn,"%s.%s%s",prefix,fn_chr,SUFFIX);

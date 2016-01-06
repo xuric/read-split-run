@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
 	printIt = true;
       }
       if (printIt) {
-	fprintf(fResults,"%i\t%i\t%i--%i\t%s\t",
+	fprintf(fResults,"%li\t%li\t%li--%li\t%s\t",
 	       results[i][ii[i]]->supportCount,
 	       results[i][ii[i]]->spliceLength,
 	       results[i][ii[i]]->minSmallSupport,
@@ -328,8 +328,8 @@ int main(int argc, char *argv[]) {
   printf("file \t#known unique to file \t#novel unique to file\ttotal known+novel in file\tmax support for any read\n");
 
   for(i=0; i < numResultsFiles; i++) {
-    fprintf(fSummary,"%s\t%i\t%i\t%i\t%i\n", argv[i+4], myKnownCount[i], myNovelCount[i], results[i].size(), maxSupportNum[i]);
-    printf("%s\t%i\t%i\t%i\t%i\n", argv[i+4], myKnownCount[i], myNovelCount[i], results[i].size(), maxSupportNum[i]);
+    fprintf(fSummary,"%s\t%i\t%i\t%li\t%i\n", argv[i+4], myKnownCount[i], myNovelCount[i], results[i].size(), maxSupportNum[i]);
+    printf("%s\t%i\t%i\t%li\t%i\n", argv[i+4], myKnownCount[i], myNovelCount[i], results[i].size(), maxSupportNum[i]);
   }
 
 

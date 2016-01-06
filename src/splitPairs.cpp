@@ -25,6 +25,7 @@
 
 Modification history...  
 
+1/6/2016   - bug fixes in a few of the .c files that were not allocating enough space for filenames, causing pipeline to crash sometimes.  Replace a few more %i with %li in .c(pp) files to get rid of compile warnings.
 11/24/2015 - Modify RSW.h and this file to print out the actual sequence for split pairs.
              This will appear in the output in the .results files.  
            - Update comments in this file and RSW.h.  Replace %i with %li where required
@@ -629,7 +630,7 @@ void printStats(FILE *f) {
   char s[1000], mem[20]="", units[20]="";
   while (fscanf(fStatus,"%999s",s) == 1) {
     if (strcmp(s,"VmRSS:") == 0) {
-      fscanf(fStatus,"%19s %19s",mem, units);
+      int result = fscanf(fStatus,"%19s %19s",mem, units);
       break;
     }
   }

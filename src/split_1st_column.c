@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
     }
     as = strlen(argv[1]) *sizeof(char);
     ss = strlen(SUFFIX) *sizeof(char);
-    outname = (char *)malloc(as+ss);
-    memset(outname, 0, as+ss);
+    outname = (char *)malloc(as+ss + 1); // bug fix 6 jan 2016, added +1 to include space for terminating NULL character
+    memset(outname, 0, as+ss+1); // bug fix 6 jan 2016, added +1 to include space for terminating NULL character
     strcpy(outname, argv[1]);
     strcat(outname, SUFFIX);
     outname[as+ss] = '\0';

@@ -92,8 +92,8 @@ int main(int argc, char *argv[]) {
         name = argv[1];
     }
     sn = strlen(name);
-    newfn = (char *)malloc(sizeof(char) * (sp+sn+ss));
-    memset(newfn,0,sizeof(char)*(sp+sn+ss));
+    newfn = (char *)malloc(sizeof(char) * (sp+sn+ss+1)); // bug fix 6 jan 2016, added +1 to include space for terminating NULL character
+    memset(newfn,0,sizeof(char)*(sp+sn+ss+1)); // bug fix 6 jan 2016, added +1 to include space for terminating NULL character
     if (sp) strcpy(newfn,argv[4]);
     if (sp && !flag) strcat(newfn,"/");
     newfn = strcat(strcat(newfn, name),SUFFIX);
